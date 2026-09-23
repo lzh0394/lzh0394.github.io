@@ -1,0 +1,85 @@
+{{- /*
+  评论区（Giscus）
+
+  只在「文章页」渲染，且需要 hugo.yaml 里 params.giscus 配好 repo/repoId。
+  两个开关，任一为假就不输出任何东西：
+    - params.giscus.enabled          全站开关
+    - 文章 front matter 的 comments: false   单篇关闭
+
+  刻意做成一个 partial 而不是塞进 foot_custom.html：
+  giscus 的 client.js 会主动寻找页面上已有的 .giscus 容器并把 iframe 注入进去，
+  所以哪怕脚本放在 <body> 末尾，评论区也能出现在你想要的位置（正文之后、页脚之前）。
+*/ -}}
+{{- $g := site.Params.giscus -}}
+{{- $show := and $g.enabled $g.repo $g.repoId (ne .Params.comments false) -}}
+{{- if $show }}
+<section class="comments" id="comments">
+  <h2>评论</h2>
+  <div class="giscus"></div>
+  <script>
+    /* Giscus 的 client.js 只在首次加载时读 data-theme，页面内切换主题要重设 iframe 的 src。
+       做法与官方文档一致：给 iframe 的 URL 加上 theme 参数。 */
+    (function () {
+      var desired = document.documentElement.getAttribute('data-giscus-theme') || '{{ $g.theme | default "light" }}';
+      var frame = null;
+      var timer = null;
+
+      function apply() {
+        if (!frame) {
+          frame = document.querySelector('iframe.giscus-frame');
+          if (!frame) return;
+        }
+        var url;
+        try {
+          url = new URL(frame.src);
+        } catch (e) {
+          return;
+        }
+        if (url.searchParams.get('theme') === desired) return;
+        url.searchParams.set('theme', desired);
+        frame.src = url.toString();
+      }
+
+      function schedule() {
+        if (timer) clearTimeout(timer);
+        /* client.js 是 async 的，iframe 不一定已经存在，所以轮询几次 */
+        var tries = 0;
+        (function tick() {
+          frame = document.querySelector('iframe.giscus-frame');
+          if (frame || ++tries > 20) {
+            apply();
+            return;
+          }
+          timer = setTimeout(tick, 150);
+        })();
+      }
+
+      window.addEventListener('message', function (event) {
+        if (event.origin !== 'https://giscus.app') return;
+        var data = event.data;
+        if (data && data.giscus && data.giscus.resizeHeight) apply();
+      });
+
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
+      schedule();
+    })();
+  </script>
+  <script
+    src="https://giscus.app/client.js"
+    data-repo="{{ $g.repo }}"
+    data-repo-id="{{ $g.repoId }}"
+    {{ with $g.category }}data-category="{{ . }}"{{ end }}
+    {{ with $g.categoryId }}data-category-id="{{ . }}"{{ end }}
+    data-mapping="{{ $g.mapping | default "pathname" }}"
+    data-strict="0"
+    data-reactions-enabled="{{ $g.reactionsEnabled | default "1" }}"
+    data-emit-metadata="0"
+    data-input-position="{{ $g.inputPosition | default "bottom" }}"
+    data-theme="{{ $g.theme | default "light" }}"
+    data-lang="zh-CN"
+    {{ if eq ($g.loading | default "lazy") "lazy" }}data-loading="lazy"{{ end }}
+    crossorigin="anonymous"
+    async>
+  </script>
+</section>
+{{- end }}

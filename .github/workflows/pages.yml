@@ -1,0 +1,78 @@
+name: Build & Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GitHub Pages 部署需要的三项权限。
+# id-token 用于 OIDC，让 deploy-pages 不必长期持有凭证。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages 部署同时只允许一个。
+# 这里刻意不写 cancel-in-progress: true —— 部署跑到一半被取消，
+# 可能让线上的 Pages 处于半更新状态；宁可排队等前一次跑完。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Hugo → Pagefind → 上传产物
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v5
+
+      - name: 安装 Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          # 必须 >= 0.146.0：xmin 用的是新版 layouts/_partials/ 目录结构
+          # 与本地 .tools/hugo 里的版本保持一致，避免"本地能构建、CI 不能"
+          hugo-version: '0.166.0'
+
+      - name: 安装 Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      # npm run build 的第二步就是调用 Pagefind，
+      # 顺序由 scripts/build.mjs 保证：Hugo 先出站点，Pagefind 再建索引。
+      # 这一步能找到 Hugo 是因为 build.mjs 会依次尝试
+      # HUGO_BIN → .tools/hugo → PATH，而 CI 里 Hugo 在 PATH 上
+      # （.tools/ 被 gitignore，CI 里不存在）。
+      #
+      # 注意这里不用官方 starter 的 `hugo --minify`，而是走本项目的构建脚本，
+      # 否则 Pagefind 索引不会生成，站内搜索会失效。
+      - name: 构建站点与搜索索引
+        run: npm run build
+        env:
+          HUGO_ENVIRONMENT: production
+
+      - name: 配置 Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    name: 发布到 GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署
+        id: deployment
+        uses: actions/deploy-pages@v5

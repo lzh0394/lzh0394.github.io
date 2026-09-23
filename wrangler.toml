@@ -1,0 +1,24 @@
+# Cloudflare Workers 部署配置（静态资源模式）
+#
+# 这是一个纯静态站点，不需要 Worker 脚本，只托管 public/ 里的文件。
+# 完整构建链是：hugo → pagefind → wrangler deploy
+#
+# name 决定默认域名 <name>.<account>.workers.dev，也决定自定义域名绑定到哪个 Worker
+name = "blog-lzh0394"
+compatibility_date = "2026-09-21"
+
+# 把构建产物的目录直接作为 Worker 的静态资源。
+# not_found_handling = "404-page" 表示命中不到文件时返回 public/404.html
+# （Hugo 会生成它），而不是返回 SPA 式的 index.html 兜底。
+[assets]
+directory = "./public"
+not_found_handling = "404-page"
+
+# 绑定自定义域名。
+# custom_domain = true 表示 Cloudflare 会自己创建 DNS 记录并签发证书，
+# 不需要你手动加 CNAME。前提是 lzh0394.com 这个 zone 在这个账号下且已激活。
+#
+# 官方文档：https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+[[routes]]
+pattern = "blog.lzh0394.com"
+custom_domain = true

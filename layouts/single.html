@@ -1,0 +1,20 @@
+{{- /*
+  站点级的 single.html，用来给文章页加上评论区。
+
+  对主题原版唯一的改动是第 10 行：{{ partial "comments.html" . }}
+  如果你以后升级 xmin，把主题里的 single.html 复制过来重新对照一次即可。
+*/ -}}
+{{ partial "header.html" . }}
+<div class="article-meta">
+<h1><span class="title">{{ .Title | markdownify }}</span></h1>
+{{ with .Params.author }}<h2 class="author">{{ . }}</h2>{{ end }}
+{{ if (gt .Params.date 0) }}<h2 class="date">{{ .Date.Format "2006/01/02" }}</h2>{{ end }}
+</div>
+
+<main>
+{{ .Content }}
+</main>
+
+{{ partial "comments.html" . }}
+
+{{ partial "footer.html" . }}

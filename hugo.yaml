@@ -1,0 +1,125 @@
+# ============================================================
+# 站点配置 —— Hugo + xmin 主题
+# 文档: https://gohugo.io/configuration/all/
+# ============================================================
+
+# 部署后的真实网址。RSS 与 sitemap 用它拼绝对链接，必须与线上一致。
+#
+# 现在部署在 GitHub Pages 的用户站点上，域名是 <账号>.github.io 的根路径。
+# 之所以没有 /blog/ 这类子路径：仓库名就叫 lzh0394.github.io，
+# GitHub 会把用户站点发布在根路径。
+#
+# 若以后改用普通项目仓库（例如 lzh0394/blog），这里要改成
+# "https://lzh0394.github.io/blog/"，末尾斜杠不能少，否则相对链接会错。
+baseURL: "https://lzh0394.github.io/"
+
+# 内容默认语言。中文站建议设为 zh-cn
+defaultContentLanguage: "zh-cn"
+# 站点区域设置：决定数字、日期、排序等本地化行为（Hugo 0.158+ 用它替代 languageCode）
+locale: "zh-cn"
+
+title: "我的博客"
+theme: "hugo-xmin"
+
+# 构建时忽略的文件（写作时临时存稿可以用这些后缀，不会被发布）
+ignoreFiles: ["\\.Rmd$", "\\.Rmarkdown$", "_cache$"]
+
+# 脚注回跳符号
+footnotereturnlinkcontents: "↩"
+
+# ------------------------------------------------------------
+# 菜单。name 是显示文字，url 留空表示首页，weight 决定顺序
+# ------------------------------------------------------------
+menu:
+  main:
+    - name: 首页
+      url: ""
+      weight: 1
+    - name: 关于
+      url: "about/"
+      weight: 2
+    - name: 分类
+      url: "categories/"
+      weight: 3
+    - name: 标签
+      url: "tags/"
+      weight: 4
+    - name: 搜索
+      url: "search/"
+      weight: 5
+    - name: 订阅
+      url: "index.xml"
+      weight: 6
+
+# ------------------------------------------------------------
+# 文章的永久链接格式。:slug 取自文件名（去掉日期前缀）
+# ------------------------------------------------------------
+permalinks:
+  post: "/post/:year/:month/:day/:slug/"
+
+# ------------------------------------------------------------
+# 站点参数
+# ------------------------------------------------------------
+params:
+  description: "一个用 Hugo 和 xmin 主题搭建的极简博客。"
+  # 页脚。支持 Markdown 链接；{Year} 会自动替换成当前年份
+  footer: "&copy; 我的名字 2026 -- {Year} | [GitHub](https://github.com/) | [RSS](/index.xml)"
+
+  # ----------------------------------------------------------
+  # 评论：Giscus（基于 GitHub Discussions）
+  #
+  # 评论存在一个【独立且公开】的仓库里：hzl9900/blog-comments
+  # 博客源码仓库是 private，但 Giscus 需要公开仓库才能读写 Discussions，
+  # 所以拆成两个。博客源码的私密性和评论功能因此可以同时成立。
+  #
+  # category / categoryId 取自 https://giscus.app/ 生成的配置。
+  # 用 Announcements 类型：只有维护者能发起新讨论，避免有人在 Discussions 里乱开帖。
+  #
+  # 留空 repo/repoId 则全站关闭评论。
+  # ----------------------------------------------------------
+  giscus:
+    enabled: true
+    repo: "hzl9900/blog-comments"
+    repoId: "R_kgDOUj4Ufg"
+    category: "Announcements"
+    categoryId: "DIC_kwDOUj4Ufs4DGIgA"
+    # 文章与 Discussion 的对应方式。pathname 最稳：
+    # 即使标题改了，只要 URL 不变，评论就不会丢。
+    mapping: "pathname"
+    # 评论框在评论区顶部还是底部
+    inputPosition: "bottom"
+    # 是否显示 GitHub 表情回应
+    reactionsEnabled: "1"
+    # 页面加载时只渲染占位，滚动到附近才真正加载 iframe
+    loading: "lazy"
+    # iframe 主题。这里的 "light"/"dark" 会由 head_custom.html 里的一小段
+    # 脚本按访客的系统深色模式自动切换。
+    theme: "light"
+
+# 允许正文里出现原始 HTML（比如 <img>、<details>）。xmin 的首页就用到这个
+security:
+  allowContent: ['.*']
+
+# ------------------------------------------------------------
+# Markdown 渲染设置
+# ------------------------------------------------------------
+markup:
+  highlight:
+    # xmin 有意关掉代码围栏高亮，保持零依赖、零额外 CSS
+    codeFences: false
+  goldmark:
+    renderer:
+      # 允许 Markdown 里直接写 HTML
+      unsafe: true
+    extensions:
+      passthrough:
+        enable: true
+        delimiters:
+          block:
+            - - \[
+              - \]
+            - - $$
+              - $$
+          inline:
+            - - \(
+              - \)
