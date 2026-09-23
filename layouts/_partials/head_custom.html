@@ -1,10 +1,3 @@
-{{- /* 按需引入资源，避免无关页面多加载 CSS/JS。 */ -}}
-
-{{- if eq .Layout "search" }}
-<link rel="stylesheet" href="{{ "pagefind/pagefind-ui.css" | relURL }}" />
-<link rel="stylesheet" href="{{ "css/search.css" | relURL }}" />
-{{- end }}
-
 {{- /* Giscus 的 iframe 是一个独立文档，站点的深色模式管不到它。
        这里先按访客的系统偏好选 light / dark，写到一个自定义属性上，
        评论区脚本再把它读出来当作 Giscus 的主题。

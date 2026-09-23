@@ -44,12 +44,9 @@ menu:
     - name: 标签
       url: "tags/"
       weight: 4
-    - name: 搜索
-      url: "search/"
-      weight: 5
     - name: 订阅
       url: "index.xml"
-      weight: 6
+      weight: 5
 
 # ------------------------------------------------------------
 # 文章的永久链接格式。:slug 取自文件名（去掉日期前缀）
