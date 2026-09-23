@@ -1,0 +1,22 @@
+/* ============================================================
+   评论区样式
+   只做两件事：和正文拉开距离，以及让 iframe 有合理的初始高度。
+   Giscus 自己会往 <head> 最前面插一份 default.css，这里不需要重写它。
+   ============================================================ */
+
+.comments {
+  margin-top: 3em;
+  padding-top: 0.5em;
+  border-top: 1px dashed #ddd;
+}
+
+.comments h2 {
+  font-size: 1.1em;
+}
+
+/* iframe 的高度由 Giscus 通过 postMessage 动态设置。
+   这里给的是加载前的占位高度，避免页面跳动。 */
+.giscus {
+  margin-top: 1em;
+  min-height: 180px;
+}

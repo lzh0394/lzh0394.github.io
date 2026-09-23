@@ -1,0 +1,41 @@
+{{ partial "header.html" . }}
+
+<h1>{{ .Title }}</h1>
+
+<div id="search" data-pagefind-ignore></div>
+
+<noscript>
+<p>搜索依赖 JavaScript。你的浏览器似乎禁用了它，可以改用左上角的「订阅」通过 RSS 阅读本站。</p>
+</noscript>
+
+<script src="{{ "pagefind/pagefind-ui.js" | relURL }}"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    if (!window.PagefindUI) {
+      document.getElementById('search').innerHTML =
+        '<p>搜索索引没找到。请先在项目根目录运行 <code>npm run build</code> 生成索引，再重新加载本页。</p>';
+      return;
+    }
+    new PagefindUI({
+      element: '#search',
+      showSubResults: true,
+      showEmptyFilters: false,
+      resetStyles: false,
+      translations: {
+        placeholder: '搜索文章…',
+        clear_search: '清空',
+        load_more: '加载更多结果',
+        search_label: '搜索本站',
+        filters_label: '筛选',
+        zero_results: '没有找到与 [SEARCH_TERM] 相关的内容',
+        many_results: '找到 [COUNT] 条与 [SEARCH_TERM] 相关的内容',
+        one_result: '找到 [COUNT] 条与 [SEARCH_TERM] 相关的内容',
+        alt_search: '没有找到 [SEARCH_TERM]，以下是与 [DIFFERENT_TERM] 相关的结果',
+        search_suggestion: '没有找到 [SEARCH_TERM]，可以试试：',
+        searching: '搜索中…'
+      }
+    });
+  });
+</script>
+
+{{ partial "footer.html" . }}

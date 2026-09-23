@@ -1,0 +1,26 @@
+# 构建产物
+/public/
+/resources/_gen/
+
+# Node 依赖与缓存（只为 Pagefind 而存在）
+# package.json 和 package-lock.json 都要提交，才能复现同一版本的索引器
+/node_modules/
+/.npm-cache/
+
+# Hugo 二进制：约 60 MB，超过 GitHub 建议的 50 MB 上限，不进仓库。
+# 用 scripts/setup.ps1 下载，CI 里由 GitHub Actions 安装。
+/.tools/
+
+# Hugo 本地缓存
+/.hugo_build.lock
+
+# 临时目录
+/_tmp/
+/_smoke/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

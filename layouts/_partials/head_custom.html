@@ -1,0 +1,29 @@
+{{- /* 按需引入资源，避免无关页面多加载 CSS/JS。 */ -}}
+
+{{- if eq .Layout "search" }}
+<link rel="stylesheet" href="{{ "pagefind/pagefind-ui.css" | relURL }}" />
+<link rel="stylesheet" href="{{ "css/search.css" | relURL }}" />
+{{- end }}
+
+{{- /* Giscus 的 iframe 是一个独立文档，站点的深色模式管不到它。
+       这里先按访客的系统偏好选 light / dark，写到一个自定义属性上，
+       评论区脚本再把它读出来当作 Giscus 的主题。
+       监听 media 查询的变化，访客中途切换系统主题也能跟上。
+       仅在真的会输出评论区时才引入。 */}}
+{{- $g := site.Params.giscus -}}
+{{- if and $g.enabled $g.repo $g.repoId (eq .Kind "page") (ne .Params.comments false) }}
+<link rel="stylesheet" href="{{ "css/comments.css" | relURL }}" />
+<script>
+  (function () {
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    function sync() {
+      document.documentElement.setAttribute(
+        'data-giscus-theme',
+        prefersDark.matches ? 'dark' : 'light'
+      );
+    }
+    sync();
+    prefersDark.addEventListener('change', sync);
+  })();
+</script>
+{{- end }}
