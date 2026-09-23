@@ -22,7 +22,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Hugo → Pagefind → 上传产物
+    name: Hugo → 上传产物
     steps:
       - name: 检出仓库
         uses: actions/checkout@v5
@@ -34,31 +34,16 @@ jobs:
           # 与本地 .tools/hugo 里的版本保持一致，避免"本地能构建、CI 不能"
           hugo-version: '0.166.0'
 
-      - name: 安装 Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: '22'
-          cache: npm
-
-      - name: 安装依赖
-        run: npm ci
-
-      # npm run build 的第二步就是调用 Pagefind，
-      # 顺序由 scripts/build.mjs 保证：Hugo 先出站点，Pagefind 再建索引。
-      # 这一步能找到 Hugo 是因为 build.mjs 会依次尝试
-      # HUGO_BIN → .tools/hugo → PATH，而 CI 里 Hugo 在 PATH 上
-      # （.tools/ 被 gitignore，CI 里不存在）。
-      #
-      # 注意这里不用官方 starter 的 `hugo --minify`，而是走本项目的构建脚本，
-      # 否则 Pagefind 索引不会生成，站内搜索会失效。
-      - name: 构建站点与搜索索引
-        run: npm run build
-        env:
-          HUGO_ENVIRONMENT: production
-
       - name: 配置 Pages
         id: pages
         uses: actions/configure-pages@v5
+
+      # 构建命令用 actions 提供的 base_url，而不是写死 hugo.yaml 里的 baseURL。
+      # 这样仓库改名、换域名或改用项目仓库时，CI 会自动跟着变。
+      - name: 构建站点
+        run: hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
+        env:
+          HUGO_ENVIRONMENT: production
 
       - name: 上传产物
         uses: actions/upload-pages-artifact@v3
