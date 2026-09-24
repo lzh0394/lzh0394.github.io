@@ -181,12 +181,12 @@ hugo --minify --baseURL "https://lzh0394.github.io/"
 
 | 仓库 | 可见性 | 用途 |
 |---|---|---|
-| `hzl9900/blog` | private | 博客源码 |
-| `hzl9900/blog-comments` | **public** | 只放评论，不含任何源码 |
+| `lzh0394/lzh0394.github.io` | public | 博客源码 |
+| `lzh0394/blog-comments` | public | 只放评论，不含任何源码 |
 
-**迁移到 GitHub Pages 后这条理由变了**：Pages 用户站点需要源码仓库是 public（免费账号），所以源码仓库已经公开，其实可以和评论合并。
+**迁移到 GitHub Pages 后原始理由已消失**：Pages 用户站点要求源码仓库是 public，所以源码仓库现在本身就是公开的，技术上可以和评论合并。
 
-但**现在不必动**——`blog-comments` 与站点的评论数据完全解耦，合并只会把历史评论弄丢。保持现状即可。
+仍然分开是**有意的**：评论数据独立于源码，换托管、重建仓库、改写源码 git 历史都不会影响已有评论。合并只会把历史评论弄丢。
 
 ### 配置已完成，无需再动
 
@@ -194,10 +194,10 @@ hugo --minify --baseURL "https://lzh0394.github.io/"
 
 | 字段 | 值 | 来源 |
 |---|---|---|
-| `repo` | `hzl9900/blog-comments` | 公开评论仓库 |
-| `repoId` | `R_kgDOUj4Ufg` | GitHub GraphQL API |
+| `repo` | `lzh0394/blog-comments` | 公开评论仓库 |
+| `repoId` | `R_kgDOUoVPaQ` | GitHub GraphQL API |
 | `category` | `Announcements` | Discussions 分类 |
-| `categoryId` | `DIC_kwDOUj4Ufs4DGIgA` | GitHub GraphQL API |
+| `categoryId` | `DIC_kwDOUoVPac4DGRRM` | GitHub GraphQL API |
 
 前置条件也都满足了：`blog-comments` 已开启 Discussions，giscus App 已授权。
 
@@ -207,7 +207,7 @@ hugo --minify --baseURL "https://lzh0394.github.io/"
 > ```bash
 > gh api graphql -f query='
 > {
->   repository(owner: "hzl9900", name: "blog-comments") {
+>   repository(owner: "lzh0394", name: "blog-comments") {
 >     id
 >     hasDiscussionsEnabled
 >     discussionCategories(first: 10) { nodes { id name } }

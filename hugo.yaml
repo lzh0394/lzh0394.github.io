@@ -65,9 +65,13 @@ params:
   # ----------------------------------------------------------
   # 评论：Giscus（基于 GitHub Discussions）
   #
-  # 评论存在一个【独立且公开】的仓库里：hzl9900/blog-comments
-  # 博客源码仓库是 private，但 Giscus 需要公开仓库才能读写 Discussions，
-  # 所以拆成两个。博客源码的私密性和评论功能因此可以同时成立。
+  # 评论存在一个【独立】的仓库里：lzh0394/blog-comments
+  # 拆成两个仓库的历史原因（源码私有）已经消失——博客迁到 GitHub Pages 后
+  # lzh0394.github.io 本身就是 public。仍然分开是为了让评论数据独立于源码：
+  # 换托管、重建仓库或改写源码历史都不会影响已有评论。
+  #
+  # 注意 repoId / categoryId 是仓库与分类的 GraphQL 全局 ID，
+  # 一旦换了评论仓库（或删了重建），这两个值必须跟着换，否则评论区会加载失败。
   #
   # category / categoryId 取自 https://giscus.app/ 生成的配置。
   # 用 Announcements 类型：只有维护者能发起新讨论，避免有人在 Discussions 里乱开帖。
@@ -76,10 +80,10 @@ params:
   # ----------------------------------------------------------
   giscus:
     enabled: true
-    repo: "hzl9900/blog-comments"
-    repoId: "R_kgDOUj4Ufg"
+    repo: "lzh0394/blog-comments"
+    repoId: "R_kgDOUoVPaQ"
     category: "Announcements"
-    categoryId: "DIC_kwDOUj4Ufs4DGIgA"
+    categoryId: "DIC_kwDOUoVPac4DGRRM"
     # 文章与 Discussion 的对应方式。pathname 最稳：
     # 即使标题改了，只要 URL 不变，评论就不会丢。
     mapping: "pathname"
