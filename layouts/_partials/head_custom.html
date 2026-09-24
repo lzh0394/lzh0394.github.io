@@ -1,3 +1,8 @@
+{{- /* AI 生成提示条的样式。只在标记了 aiGenerated 的文章上加载，
+       与其他页面无关。 */}}
+{{- if .Params.aiGenerated }}
+<link rel="stylesheet" href="{{ "css/ai-notice.css" | relURL }}" />
+{{- end }}
 {{- /* Giscus 的 iframe 是一个独立文档，站点的深色模式管不到它。
        这里先按访客的系统偏好选 light / dark，写到一个自定义属性上，
        评论区脚本再把它读出来当作 Giscus 的主题。

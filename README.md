@@ -14,12 +14,15 @@
 │   ├── about.md                    # 「关于」页面
 │   └── post/                       # 博客文章（Markdown）
 ├── layouts/                        # 站点级布局覆盖（见下方说明）
-│   ├── single.html                 # 文章页：把评论区插到正文之后
+│   ├── single.html                 # 文章页：AI 提示条 + 评论区
 │   └── _partials/
-│       ├── head_custom.html        # 引入评论区 CSS / 主题探测脚本
+│       ├── head_custom.html        # 引入评论区 / AI 提示条 CSS、主题探测脚本
+│       ├── ai_notice.html          # AI 生成内容提示条（按 front matter 开关）
 │       └── comments.html           # 评论区（Giscus）
 ├── themes/hugo-xmin/               # 主题，保持原版未改动
-├── static/css/comments.css         # 评论区样式
+├── static/css/
+│   ├── comments.css                # 评论区样式
+│   └── ai-notice.css               # AI 生成提示条样式
 ├── scripts/setup.ps1               # 下载 Hugo 二进制到 .tools/
 ├── .github/workflows/pages.yml     # 推送到 main 后自动构建并部署到 GitHub Pages
 ├── .tools/hugo/hugo.exe            # Hugo 二进制（被 gitignore，由 setup.ps1 下载）
@@ -251,6 +254,32 @@ comments: false
 ```
 
 评论区只出现在**文章页**。首页、关于页、分类页、标签页、搜索页都不会有。
+
+## AI 生成内容的标记
+
+文章 front matter 里加一行 `aiGenerated: true`，正文之前就会出现一条提示条：
+
+```yaml
+aiGenerated: true
+aiModel: "DeepSeek"   # 可选：模型名，不写就显示“AI”
+aiNote: "……"          # 可选：完全覆盖默认措辞
+```
+
+默认措辞说清三件事：由大语言模型生成、事实与命令经过抽样核对、关键决定以官方文档为准。
+
+实现是两处站点级文件加一处插桩，`themes/hugo-xmin/` 依旧保持原版：
+
+| 文件 | 作用 |
+|---|---|
+| `layouts/_partials/ai_notice.html` | 提示条本体，只在 `aiGenerated` 为真时输出 |
+| `static/css/ai-notice.css` | 提示条样式，由 `head_custom.html` 按需加载 |
+| `layouts/single.html` | 把提示条插到正文之前 |
+
+**RSS 与列表页也要带上声明。** Hugo 的 feed 用的是 `.Summary`，不写 `summary` 时它取正文开头——如果文章开头是目录或代码块，摘要会变成一大段 HTML，声明也会漏掉。这时在 front matter 里显式写一段：
+
+```yaml
+summary: "……。本文由 DeepSeek 生成，事实经过抽样核对，关键决定请以官方文档为准。"
+```
 
 ## 还想加什么
 

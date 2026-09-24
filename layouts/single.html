@@ -1,7 +1,9 @@
 {{- /*
-  站点级的 single.html，用来给文章页加上评论区。
+  站点级的 single.html，用来给文章页加上评论区与 AI 生成提示条。
 
-  对主题原版唯一的改动是第 10 行：{{ partial "comments.html" . }}
+  对主题原版有两处改动：
+    1. {{ partial "ai_notice.html" . }} —— 正文之前插入 AI 生成提示条（按 front matter 开关）
+    2. {{ partial "comments.html" . }}  —— 正文之后插入评论区
   如果你以后升级 xmin，把主题里的 single.html 复制过来重新对照一次即可。
 */ -}}
 {{ partial "header.html" . }}
@@ -12,6 +14,7 @@
 </div>
 
 <main>
+{{ partial "ai_notice.html" . }}
 {{ .Content }}
 </main>
 
