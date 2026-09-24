@@ -1,0 +1,14 @@
+{{- /* AI 生成内容提示条。
+       文章 front matter 里写 aiGenerated: true 就会输出；刻意做成 opt-in，
+       只有明确标记的文章才出现提示条，其他文章零影响。
+
+       可选参数：
+         aiModel  —— 模型名，默认“AI”
+         aiNote   —— 完全覆盖默认措辞
+       默认措辞刻意说清三件事：由模型生成、可能出错、关键决策以官方文档为准。 */ -}}
+{{- if .Params.aiGenerated -}}
+<aside class="ai-notice" role="note">
+  <strong>{{ with .Params.aiModel }}{{ . }}{{ else }}AI{{ end }} 生成</strong>
+  <span>{{ .Params.aiNote | default "本文由大语言模型自动生成，事实与命令经过抽样核对，但仍可能存在错误；涉及生产环境的决定请以官方文档为准。" }}</span>
+</aside>
+{{- end -}}

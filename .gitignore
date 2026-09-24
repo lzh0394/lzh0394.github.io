@@ -17,6 +17,7 @@
 # 临时目录
 /_tmp/
 /_smoke/
+/.preview/
 
 # 编辑器
 .vscode/
