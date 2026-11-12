@@ -15,6 +15,7 @@
 /.hugo_build.lock
 
 # 临时目录
+/tmp/
 /_tmp/
 /_smoke/
 /.preview/

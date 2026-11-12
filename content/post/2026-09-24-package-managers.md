@@ -2,16 +2,9 @@
 title: "包管理器全景：从 apt 到 Cargo 的依赖管理原理与取舍"
 slug: "package-managers"
 date: 2026-09-24
-author: "我的名字"
 categories: ["工程"]
-tags: ["包管理器", "依赖管理", "供应链安全", "工程实践"]
+tags: ["包管理器", "依赖管理"]
 draft: false
-# AI 生成标记：页面正文之前会显示提示条（实现见 layouts/_partials/ai_notice.html）
-aiGenerated: true
-aiModel: "DeepSeek"
-# RSS 与列表页取 .Summary；不写 summary 时 Hugo 会拿正文开头，
-# 而本文开头是目录 HTML，摘要会变成一大段锚点。所以这里显式给一段，
-# 并把 AI 声明写进去，让订阅者也能看到。
 summary: "包管理器全景长文（40 章）：依赖求解、锁文件与隔离等共性原理，系统级与语言级包管理器的对比与取舍，应用分发层与供应链安全，最后是场景化选型与常见陷阱。本文由 DeepSeek 生成，事实与命令经过抽样核对，关键决定请以官方文档为准。"
 ---
 
