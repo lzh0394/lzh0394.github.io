@@ -19,9 +19,12 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# 钉住具体镜像而不是 ubuntu-latest：GitHub 的 ubuntu-latest 正在迁移到 Ubuntu 26，
+# 用标签会一直收到迁移提示，构建环境也可能悄悄变化。Hugo 构建只依赖基础工具，
+# 用 24.04 LTS 足够；要换版本时显式改这里。
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Hugo → 上传产物
     steps:
       - name: 检出仓库
@@ -36,7 +39,7 @@ jobs:
 
       - name: 配置 Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       # 构建命令用 actions 提供的 base_url，而不是写死 hugo.yaml 里的 baseURL。
       # 这样仓库改名、换域名或改用项目仓库时，CI 会自动跟着变。
@@ -46,13 +49,13 @@ jobs:
           HUGO_ENVIRONMENT: production
 
       - name: 上传产物
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./public
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: 发布到 GitHub Pages
     environment:
       name: github-pages
