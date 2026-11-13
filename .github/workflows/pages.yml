@@ -34,8 +34,8 @@ jobs:
         uses: peaceiris/actions-hugo@v3
         with:
           # 必须 >= 0.146.0：xmin 用的是新版 layouts/_partials/ 目录结构
-          # 与本地 .tools/hugo 里的版本保持一致，避免"本地能构建、CI 不能"
-          hugo-version: '0.166.0'
+          # 与本地 .tools/hugo 里的版本保持一致（0.169.0），避免"本地能构建、CI 不能"
+          hugo-version: '0.169.0'
 
       - name: 配置 Pages
         id: pages

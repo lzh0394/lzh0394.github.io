@@ -1,21 +1,20 @@
 ---
-title: 控制流语句的种类
+title: "控制流语句的种类"
 slug: "control-flow-statements"
-date: 2026-10-20
+date: "2026-10-20"
 categories: ["编程语言"]
-tags:
-  - 编程语言
+tags: ["编程语言"]
 draft: false
-summary: 从「改变执行次序的方式」出发给控制流语句分类：顺序与复合、选择、迭代、跳转、异常、作用域退出钩子、挂起与恢复；对照 C、C++、Rust、Go、Zig、Java、Python、JavaScript 的官方规范落点，并单列版本差异（C++11/17/20/23/26、Java 5/7/14/21、Python 3.8/3.10/3.11/3.14、Go 1.22/1.23、Rust 1.13/1.39/1.65、ES2015/2018/2019）。
+summary: "从「改变执行次序的方式」出发给控制流语句分类：顺序与复合、选择、迭代、跳转、异常、作用域退出钩子、挂起与恢复；对照 C、C++、Rust、Go、Zig、Java、Python、JavaScript 的官方规范落点，并单列版本差异（C++11/17/20/23/26、Java 5/7/14/21、Python 3.8/3.10/3.11/3.14、Go 1.22/1.23、Rust 1.13/1.39/1.65、ES2015/2018/2019）。"
 ---
 
 > 分类骨架取自 C++ 工作草案第 8 章 [\[stmt\]](https://eel.is/c++draft/stmt) 与 C23 草案 6.8 节，其余语言按各自官方规范对照。C++ 引的是现行工作草案（<https://eel.is/c++draft/>，2026-08 快照，C++29 方向）；涉及 C++26 才有的语句时单独标注。
 
 ---
 
-## 一、边界：什么算控制流语句
+## 1. 边界：什么算控制流语句
 
-语句默认按书写顺序逐条执行。C++ 草案 [\[stmt.pre\]](https://eel.is/c++draft/stmt.pre) 第 1 段把这句写成规范措辞：*Except as indicated, statements are executed in sequence.* 控制流语句就是那些「另有指示」的语句——它们改变下一条要执行的语句是哪条。
+语句默认按书写顺序逐条执行。C++ 草案 [\[stmt.pre\]](https://eel.is/c++draft/stmt.pre) 第 1 段把这句写成规范措辞：Except as indicated, statements are executed in sequence. 控制流语句就是那些「另有指示」的语句——它们改变下一条要执行的语句是哪条。
 
 任何控制流机制都在回答三个问题之一：走哪条分支（选择）、同一段代码执行几遍（迭代）、从当前位置提前离开并去哪里（跳转、返回、抛出、挂起）。
 
@@ -43,7 +42,7 @@ summary: 从「改变执行次序的方式」出发给控制流语句分类：�
 
 ---
 
-## 二、选择语句
+## 2. 选择语句
 
 ### 2.1 if
 
@@ -72,7 +71,7 @@ JS 的 `switch` 保持 C 的形状，贯穿靠 `break` 阻断——漏写 break 
 
 ---
 
-## 三、迭代语句
+## 3. 迭代语句
 
 循环按「何时判断条件」与「怎么推进」分成四类。
 
@@ -91,7 +90,7 @@ JS 的 `switch` 保持 C 的形状，贯穿靠 `break` 阻断——漏写 break 
 
 ---
 
-## 四、跳转语句
+## 4. 跳转语句
 
 跳转是无条件转移控制。C++ [\[stmt.jump\]](https://eel.is/c++draft/stmt.jump) 的语法是 `break`、`continue`、`return`、`co_return`、`goto` 五种，共性是「无条件」，区别是去向。
 
@@ -107,7 +106,7 @@ JS 的 `switch` 保持 C 的形状，贯穿靠 `break` 阻断——漏写 break 
 
 ---
 
-## 五、异常与清理
+## 5. 异常与清理
 
 异常是「沿调用栈向上转移」的非局部控制流：`throw` 之后，控制权不回到调用点的下一条语句，而是逐层展开栈，直到遇到匹配的处理器。展开过程中要执行的清理动作，就把异常和「作用域退出钩子」绑在了一起。
 
@@ -135,7 +134,7 @@ JS 的 `switch` 保持 C 的形状，贯穿靠 `break` 阻断——漏写 break 
 
 ---
 
-## 六、挂起与恢复
+## 6. 挂起与恢复
 
 生成器与协程把「执行点」保存下来，稍后从同一点继续，这是与跳转最本质的区别：跳转是单向的，挂起是可恢复的。
 
@@ -147,48 +146,81 @@ Go 的 `go` 语句是并发原语而非协程挂起：goroutine 一旦启动就�
 
 ---
 
-## 七、跨语言对照
+## 7. 跨语言对照
 
 下表按「控制流需求」列，不追求列出每个语言的完整语法，只标要不要得到、叫什么。
 
-| 需求 | C | C++ | Rust | Go | Zig | Java | Python | JavaScript |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 条件分支 | if/else | if、if constexpr、if consteval | if、if let（表达式） | if（条件须 bool） | if（表达式） | if/else | if/elif/else | if/else |
-| 多路分支 | switch（贯穿） | switch（贯穿，`[[fallthrough]]`） | match（表达式，穷尽） | switch（默认不贯穿，`fallthrough` 显式）、type switch | switch（表达式，无贯穿） | switch 语句/表达式（14 起），模式匹配（21 起） | match（3.10 起） | switch（贯穿） |
-| 前测循环 | while | while | while、while let | for 条件形式 | while | while | while（可带 else） | while |
-| 后测循环 | do-while | do-while | 无 | 无 | 无 | do-while | 无 | do-while |
-| 三段式计数 | for(;;) | for(;;) | 无 | for 三段式 | 无 | for(;;) | 无 | for(;;) |
-| 遍历 | 无（手写指针） | range-for（11 起） | for-in | for range | for | enhanced for（5 起） | for-in | for-of、for-in |
-| 无限循环 | for(;;) | for(;;) | loop | for {} | while (true) | for(;;) | while True | for(;;) |
-| 提前退出 | break | break | break（可带值） | break | break | break（可带标签） | break | break（可带标签） |
-| 跳过本次 | continue | continue | continue | continue | continue | continue（可带标签） | continue | continue（可带标签） |
-| 跳转 | goto | goto | 无 | goto（有作用域限制） | 无 | 无（labeled break/continue） | 无 | 无（labeled break/continue） |
-| 函数返回 | return | return | return（表达式） | return | return | return | return | return |
-| 非局部转移 | setjmp/longjmp（库） | 异常 | panic（无语言级 catch） | panic/recover | 错误值 | 异常 | 异常 | 异常 |
-| 清理钩子 | 无 | 析构（RAII） | Drop | defer | defer/errdefer | finally、try-with-resources | with、finally | finally |
-| 挂起与恢复 | 无 | 协程（20 起） | async/await（1.39 起） | go/select（并发原语） | 无 | 无 | async/await（3.5 起） | async/await、生成器 |
+分支与循环（C、C++、Rust、Go）：
+
+| 需求 | C | C++ | Rust | Go |
+| --- | --- | --- | --- | --- |
+| 条件分支 | if/else | if、if constexpr、if consteval | if、if let（表达式） | if（条件须 bool） |
+| 多路分支 | switch（贯穿） | switch（贯穿，`[[fallthrough]]`） | match（表达式，穷尽） | switch（默认不贯穿，`fallthrough` 显式）、type switch |
+| 前测循环 | while | while | while、while let | for 条件形式 |
+| 后测循环 | do-while | do-while | 无 | 无 |
+| 三段式计数 | for(;;) | for(;;) | 无 | for 三段式 |
+| 遍历 | 无（手写指针） | range-for（11 起） | for-in | for range |
+| 无限循环 | for(;;) | for(;;) | loop | for {} |
+
+分支与循环（Zig、Java、Python、JavaScript）：
+
+| 需求 | Zig | Java | Python | JavaScript |
+| --- | --- | --- | --- | --- |
+| 条件分支 | if（表达式） | if/else | if/elif/else | if/else |
+| 多路分支 | switch（表达式，无贯穿） | switch 语句/表达式（14 起），模式匹配（21 起） | match（3.10 起） | switch（贯穿） |
+| 前测循环 | while | while | while（可带 else） | while |
+| 后测循环 | 无 | do-while | 无 | do-while |
+| 三段式计数 | 无 | for(;;) | 无 | for(;;) |
+| 遍历 | for | enhanced for（5 起） | for-in | for-of、for-in |
+| 无限循环 | while (true) | for(;;) | while True | for(;;) |
+
+跳转、返回与清理（C、C++、Rust、Go）：
+
+| 需求 | C | C++ | Rust | Go |
+| --- | --- | --- | --- | --- |
+| 提前退出 | break | break | break（可带值） | break |
+| 跳过本次 | continue | continue | continue | continue |
+| 跳转 | goto | goto | 无 | goto（有作用域限制） |
+| 函数返回 | return | return | return（表达式） | return |
+| 非局部转移 | setjmp/longjmp（库） | 异常 | panic（无语言级 catch） | panic/recover |
+| 清理钩子 | 无 | 析构（RAII） | Drop | defer |
+| 挂起与恢复 | 无 | 协程（20 起） | async/await（1.39 起） | go/select（并发原语） |
+
+跳转、返回与清理（Zig、Java、Python、JavaScript）：
+
+| 需求 | Zig | Java | Python | JavaScript |
+| --- | --- | --- | --- | --- |
+| 提前退出 | break | break（可带标签） | break | break（可带标签） |
+| 跳过本次 | continue | continue（可带标签） | continue | continue（可带标签） |
+| 跳转 | 无 | 无（labeled break/continue） | 无 | 无（labeled break/continue） |
+| 函数返回 | return | return | return | return |
+| 非局部转移 | 错误值 | 异常 | 异常 | 异常 |
+| 清理钩子 | defer/errdefer | finally、try-with-resources | with、finally | finally |
+| 挂起与恢复 | 无 | 无 | async/await（3.5 起） | async/await、生成器 |
 
 ---
 
-## 八、容易混淆的几处
+## 8. 容易混淆的几处
 
-**switch 是否贯穿。** C/C++/Java/JS 默认贯穿，Go/Zig 默认不贯穿。C++17 的 `[[fallthrough]]` 只是告诉编译器「这是故意的」，不改变语义。
+switch 是否贯穿。C/C++/Java/JS 默认贯穿，Go/Zig 默认不贯穿。C++17 的 `[[fallthrough]]` 只是告诉编译器「这是故意的」，不改变语义。
 
-**for 的三套语义。** 三段式 for 是「初始化、判断、推进」的循环；遍历式 for 是「取下一个元素直到取完」的迭代；Rust 的 `for` 是 `IntoIterator` 的语法糖。三者不能互相套用：C 的 for 循环变量在循环结束后仍可见（C99 起可在 init 里声明，作用域限于循环），Python 的循环变量在循环结束后保留，Rust 的循环变量每次迭代重新绑定。
+for 的三套语义。三段式 for 是「初始化、判断、推进」的循环；遍历式 for 是「取下一个元素直到取完」的迭代；Rust 的 `for` 是 `IntoIterator` 的语法糖。三者不能互相套用：C 的 for 循环变量在循环结束后仍可见（C99 起可在 init 里声明，作用域限于循环），Python 的循环变量在循环结束后保留，Rust 的循环变量每次迭代重新绑定。
 
-**break 的标签。** Java 的 `break label` 能跳出任意带标签语句，Go 的 `break Label` 只能跳出标签标注的 for/switch/select，Rust 与 Zig 的标签只标循环或块，C/C++ 根本没有标签形式。
+break 的标签。Java 的 `break label` 能跳出任意带标签语句，Go 的 `break Label` 只能跳出标签标注的 for/switch/select，Rust 与 Zig 的标签只标循环或块，C/C++ 根本没有标签形式。
 
-**goto 的存废。** Java 保留关键字但禁用；Go 保留但限制跳转不越过变量声明；C++ 限制跳转不越过带初始化的声明。这些限制都是在防「跳到一半、变量未初始化」的未定义行为。
+goto 的存废。Java 保留关键字但禁用；Go 保留但限制跳转不越过变量声明；C++ 限制跳转不越过带初始化的声明。这些限制都是在防「跳到一半、变量未初始化」的未定义行为。
 
-**异常与语句。** C++ 的 `throw` 是表达式，所以能出现在 `a ? throw 1 : 2` 这种位置；Python 的 `raise` 是简单语句；Go 的 `panic` 是内建函数，不是语句。
+异常与语句。C++ 的 `throw` 是表达式，所以能出现在 `a ? throw 1 : 2` 这种位置；Python 的 `raise` 是简单语句；Go 的 `panic` 是内建函数，不是语句。
 
-**defer 与 with 不是跳转。** 它们挂在作用域退出上，控制权仍然按 return/break/异常的正常路径走，只是附加了清理动作。
+defer 与 with 不是跳转。它们挂在作用域退出上，控制权仍然按 return/break/异常的正常路径走，只是附加了清理动作。
 
 ---
 
-## 九、版本差异
+## 9. 版本差异
 
 只列「语句种类或形态发生变化」的节点，不列语义微调。
+
+C++ 与 C：
 
 | 语言 | 变化 | 版本 |
 | --- | --- | --- |
@@ -198,6 +230,11 @@ Go 的 `go` 语句是并发原语而非协程挂起：goroutine 一旦启动就�
 | C++ | `if consteval` | C++23 |
 | C++ | 展开语句 `template for`；`contract_assert` | C++26 |
 | C | 语句类别（labeled/compound/expression/selection/iteration/jump）自 C89 未增删；C99 允许声明与语句混排，C23 未新增控制流语句 | C89–C23 |
+
+Java 与 Python：
+
+| 语言 | 变化 | 版本 |
+| --- | --- | --- |
 | Java | enhanced for | 5 |
 | Java | try-with-resources | 7 |
 | Java | switch 表达式与 `yield`（JEP 361） | 14 |
@@ -206,6 +243,11 @@ Go 的 `go` 语句是并发原语而非协程挂起：goroutine 一旦启动就�
 | Python | `match`（PEP 634） | 3.10 |
 | Python | `except*`（PEP 654） | 3.11 |
 | Python | `except` 多类型可省括号（PEP 758）；`finally` 中 `return`/`break`/`continue` 发 SyntaxWarning（PEP 765） | 3.14 |
+
+Go、Rust 与 JavaScript：
+
+| 语言 | 变化 | 版本 |
+| --- | --- | --- |
 | Go | `range` 可遍历整数 | 1.22 |
 | Go | `range` 可遍历函数（迭代器） | 1.23 |
 | Rust | `?` 运算符 | 1.13 |
@@ -219,7 +261,7 @@ Go 的 `go` 语句是并发原语而非协程挂起：goroutine 一旦启动就�
 
 ---
 
-## 十、参考
+## 参考
 
 - C++ 草案第 8 章：<https://eel.is/c++draft/stmt>，子条款 [\[stmt.pre\]](https://eel.is/c++draft/stmt.pre)、[\[stmt.jump\]](https://eel.is/c++draft/stmt.jump)、[\[stmt.if\]](https://eel.is/c++draft/stmt.if)、[\[stmt.expand\]](https://eel.is/c++draft/stmt.expand)、[\[stmt.contract.assert\]](https://eel.is/c++draft/stmt.contract.assert)。
 - C23 草案：WG14 文档页 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/>，语句部分见 6.8 节。

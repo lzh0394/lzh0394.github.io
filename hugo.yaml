@@ -1,11 +1,10 @@
 baseURL: "https://lzh0394.github.io/"
 
-
 defaultContentLanguage: "zh-cn"
 
 locale: "zh-cn"
 
-title: "我的博客"
+title: "lzh0394"
 theme: "hugo-xmin"
 
 ignoreFiles: ["\\.Rmd$", "\\.Rmarkdown$", "_cache$"]
@@ -33,18 +32,13 @@ permalinks:
   post: "/post/:year/:month/:day/:slug/"
 
 params:
-  description: "一个极简博客。"
-  footer: "be happy"
-
-security:
-  allowContent: ['.*']
+  description: "极简"
+  footer: "Be happy."
 
 markup:
   highlight:
     codeFences: false
   goldmark:
-    renderer:
-      unsafe: true
     extensions:
       passthrough:
         enable: true

@@ -1,0 +1,20 @@
+#!/bin/sh
+# 提交前 Markdown 排版检查。
+# 不写入项目依赖：用 npx 临时取 markdownlint-cli2，版本钉死，缓存留在 npm 里。
+# 启用：git config core.hooksPath .githooks
+# 手动跑：npx --yes markdownlint-cli2@0.24.1
+
+if ! command -v npx >/dev/null 2>&1; then
+  echo "pre-commit: 未找到 npx，跳过 Markdown 检查（需要 Node.js）" >&2
+  exit 0
+fi
+
+if [ -z "$(git diff --cached --name-only --diff-filter=ACMR -- '*.md')" ]; then
+  exit 0
+fi
+
+npx --yes markdownlint-cli2@0.24.1 || {
+  echo "" >&2
+  echo "pre-commit: Markdown 排版检查未通过，修正后再提交（可先看上方文件:行号）。" >&2
+  exit 1
+}
