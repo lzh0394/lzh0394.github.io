@@ -103,7 +103,7 @@ summary: "包管理器全景长文（40 章）：依赖求解、锁文件与隔�
 | 第三部分 | 19–28 | 语言级：JS、Python、Rust、Go、JVM、.NET、C/C++ 等 |
 | 第四部分 | 29–33 | 应用层与工具链：Flatpak、容器、构建图、版本管理器、私有源 |
 | 第五部分 | 34–37 | 供应链安全：威胁模型、防御手段、平台现状 |
-| 第六部分 | 38–39 | 实践：场景化选型与常见陷阱 |
+| 第六部分 | 38–40 | 实践：场景化选型、常见陷阱与结语 |
 
 两种读法：想建立完整认知，从头读大约需要一小时；只想查某个工具，直接跳到对应章节即可。如果时间有限，建议至少读第 5 章（锁文件）、第 6 章（隔离）和第 8 章（安装时执行代码）——这三章解释的失败模式横跨所有生态，也是后面所有具体工具争议的源头。
 
@@ -118,7 +118,7 @@ summary: "包管理器全景长文（40 章）：依赖求解、锁文件与隔�
 - **包（package）**：可被安装的最小分发单位。它可能是二进制（`.deb`、`.rpm`、wheel），也可能是构建脚本或源码（crate、sdist、PKGBUILD、ebuild）。
 - **制品（artifact）**：构建设计产出并被分发的东西，范围比“包”更宽，容器镜像也属于制品。
 - **仓库（registry / repository）**：发布与索引服务，如 npm registry、PyPI、crates.io、Maven Central。本文一律叫“仓库”。
-- **源（source / mirror）**：镜像、代理或本地私有服务，如 `sources.list` 里的条目、国内镜像站、企业 Nexus。本文一律叫“源”。
+- **源（source / mirror）**：镜像、代理或本地私有服务，如 `sources.list` 里的条目、国内镜像站、企业 Nexus。需要区分形态时叫“镜像”（完整复制）与“代理”（按需缓存），统称时叫“源”。
 - **清单（manifest）**：声明**约束**的文件，如 `package.json`、`Cargo.toml`、`pyproject.toml`、`requirements.in`。
 - **锁文件（lockfile）**：记录**求解结果**的文件，如 `package-lock.json`、`Cargo.lock`、`poetry.lock`。清单与锁文件的区别是理解全文的一把钥匙。
 - **求解（resolution）**：从约束集合中选出一组具体版本的过程。
@@ -183,13 +183,13 @@ summary: "包管理器全景长文（40 章）：依赖求解、锁文件与隔�
 
 **优先取最新的深度优先回溯（没有冲突学习）**：按顺序把依赖排成队列，每个依赖优先挑最新的可行版本，走不通就回溯到上一个决策点换一个候选，直到找到一组解或穷尽所有候选。Cargo 官方文档的伪代码正是这个形状（`pick_next_dep` 选依赖、`pick_next_version` 优先取最新、失败则回溯）；`pip` 自 20.3 起默认的解析器（resolvelib）也属于这一类，它偶尔长时间卡在“正在解析依赖”正是回溯在起作用。代价是最坏情况要遍历大量组合，而且**失败时说不出为什么**：没有冲突学习的实现给不出跨多层传递依赖的解释。
 
-**回溯加冲突学习**在采用回溯的解析器里已是主流做法之一（PubGrub 系：uv、Poetry、Dart 的 pub），源自 SAT 里的 CDCL（冲突驱动子句学习）：冲突时把根因记成一条“不可兼得”的事实，以后遇到同样组合直接跳过。PubGrub 的实现文档说明它据此生成人类可读的解释，形如“因为 `foo <1.1.0` 依赖 `a ^1.0.0`，而 `a` 依赖 `b ^2.0.0`，所以 `foo <1.1.0` 需要 `b ^2.0.0`；又因为 `foo <1.1.0` 依赖 `b ^1.0.0`，`foo <1.1.0` 被禁止”。uv 用 Rust 的 pubgrub-rs，Dart 的 pub 属同一谱系。
+**回溯加冲突学习**在采用回溯的求解器里已是主流做法之一（PubGrub 系：uv、Poetry、Dart 的 pub），源自 SAT 里的 CDCL（冲突驱动子句学习）：冲突时把根因记成一条“不可兼得”的事实，以后遇到同样组合直接跳过。PubGrub 的实现文档说明它据此生成人类可读的解释，形如“因为 `foo <1.1.0` 依赖 `a ^1.0.0`，而 `a` 依赖 `b ^2.0.0`，所以 `foo <1.1.0` 需要 `b ^2.0.0`；又因为 `foo <1.1.0` 依赖 `b ^1.0.0`，`foo <1.1.0` 被禁止”。uv 用 Rust 的 pubgrub-rs，Dart 的 pub 属同一谱系。
 
 **完整的 SAT 求解**把问题编码成布尔公式交给通用求解器，libsolv 是这条路线最知名的实现，被 openSUSE 的 zypper 使用。它能力上限高，能顺带表达“两个包不能共存”“尽量保留已安装版本”这类非依赖约束；代价是编码开销，以及错误信息是求解器视角的（“不可满足的子句集”），离用户的语言较远。
 
 **放弃全局求解**换了一条路：让同一包的多个版本共存于不同子树，冲突自然消失。npm 早期的嵌套 `node_modules` 就是这个模型，代价是目录爆炸、同一份代码被装多次、幻影依赖（见第 6 章）。Maven 的依赖调解（dependency mediation）按“最近优先”挑版本，同深度时先声明者胜出；它不搜索，所以不会解析失败，而是可能悄悄选错版本，症状变成运行时的 `NoClassDefFoundError`（见第 23 章）。Go 的 MVS 更彻底，把“选最新可行版本”换成“取所有约束里最高的最小版本”，问题退化成图遍历，代价是升级不积极（见第 22 章）。
 
-最后是判断标准。**“找不到解”和“解不是你想要的”是两回事**：前者是求解空间为空，需要解释谁和谁冲突、卡在哪条路径；后者是合法解很多而求解器选得意外——Cargo 文档承认，`>=0.6` 这类开放约束会让解析器不做去重，产出两份本可合并的依赖，要用 `cargo update --precise` 收拾。两类问题的修复手段完全不同。
+最后是判断标准。**“找不到解”和“解不是你想要的”是两回事**：前者是求解空间为空，需要解释谁和谁冲突、卡在哪条路径；后者是合法解很多而求解器选得意外——Cargo 文档承认，`>=0.6` 这类开放约束会让求解器不做去重，产出两份本可合并的依赖，要用 `cargo update --precise` 收拾。两类问题的修复手段完全不同。
 
 > 一句话总结：求解器之间的差距不在能不能解，而在回溯效率与失败时能否讲清原因。
 
@@ -256,7 +256,7 @@ Go 是个例外中的例外：最小版本选择是确定性的，构建列表�
 
 #### 锁文件锁不住的东西
 
-常见事故有三类。Git 合并锁文件时冲突，人肉手改的版本组合多半没被求解器验证过，正确做法是接受任一版本后重新生成。跨平台可选依赖会漏：`esbuild`、`sharp` 这类包把平台二进制放在 `optionalDependencies` 里，锁文件只记下了解析时所在平台的条目，换平台需要重解。镜像与锁文件的哈希对不上时，安装器会拒绝而不是降级使用，这是设计如此。
+常见事故有三类。Git 合并锁文件时冲突，人肉手改的版本组合多半没被求解器验证过，正确做法是接受任一版本后重新生成。跨平台可选依赖会漏：`esbuild`、`sharp` 这类包把平台二进制放在 `optionalDependencies` 里，锁文件只记下了求解时所在平台的条目，换平台需要重解。镜像源与锁文件的哈希对不上时，安装器会拒绝而不是降级使用，这是设计如此。
 
 更根本的一点：锁文件只固定了包，不固定工具链。Node 版本、Python 解释器、C 编译器、构建时的环境变量都不在锁文件里，而它们同样影响结果。真正的可复现要一路钉到工具链和构建环境（见第 30、31 章）。
 
@@ -709,21 +709,21 @@ winget upgrade --all
 winget install --id <Publisher.Package> --source winget
 ```
 
-本文写作所用的这台机器上，`winget --version` 与 `winget search` 均执行失败（进程以非零状态退出，无输出），因此本章不引用任何 winget 版本号；manifest 的字段与可用子命令请以 `winget --help` 和官方文档为准。
+写作时在 Windows 上核对：`winget --version` 与 `winget search` 均执行失败（进程以非零状态退出，无输出），因此本章不引用任何 winget 版本号；manifest 的字段与可用子命令请以 `winget --help` 和官方文档为准。
 
 #### Chocolatey：NuGet 生态 + PowerShell 脚本
 
 Chocolatey 是三者中历史最久的，包格式建立在 NuGet 之上（`.nupkg` 加 `chocolateyInstall.ps1` 等脚本）。安装脚本以管理员权限执行 PowerShell，能力最大，风险也最大：装一个社区包等于执行一段第三方代码，脚本行为决定了软件最终装在哪、注册了什么。
 
-本机核实：`choco --version` 输出 `2.5.0`，`ChocolateyInstall=C:\ProgramData\chocolatey`，shim 在 `C:\ProgramData\chocolatey\bin`，包体与解包内容分别在 `lib` 和 `tools` 下。`choco list` 列出本机已安装，`choco upgrade all -y` 是全量升级的常见写法。
+`choco --version` 输出 `2.5.0`，`ChocolateyInstall` 指向 `C:\ProgramData\chocolatey`，shim 在 `bin` 下，包体与解包内容分别在 `lib` 与 `tools` 下。`choco list` 列出已安装的包，`choco upgrade all -y` 是全量升级的常见写法。
 
 因为要写 `C:\ProgramData` 和注册表，它基本需要管理员权限，所谓绿色版安装只是“脚本没写注册表”的特例。企业场景关心的是许可版本提供的内部源、自建包与包审核流程。社区仓库的包经过审核，但审核不等于审计。
 
 #### Scoop：不写注册表的用户级目录
 
-Scoop 反其道而行：默认装到用户目录，不写注册表，不需要管理员权限。本机实测根路径 `C:\Users\<user>\scoop`，含 `apps`、`buckets`、`shims`、`persist`、`cache` 等子目录。`buckets` 就是 Git 仓库，`git pull` 即更新软件清单，可读性与可审计性远高于二进制脚本。`shims` 为每个可执行文件生成 `.cmd`/`.ps1` 转发脚本，靠 PATH 生效——本机 shims 目录里有 88 个文件，大致对应 88 个可用命令（其中也可能含非命令转发）。`persist` 存放跨版本保留的配置，是另外两者没有的设计。
+Scoop 反其道而行：默认装到用户目录，不写注册表，不需要管理员权限。默认根路径 `C:\Users\<user>\scoop`，含 `apps`、`buckets`、`shims`、`persist`、`cache` 等子目录。`buckets` 就是 Git 仓库，`git pull` 即更新软件清单，可读性与可审计性远高于二进制脚本。`shims` 为每个可执行文件生成 `.cmd`/`.ps1` 转发脚本，靠 PATH 生效——shims 目录里的转发脚本数量大致等于可用命令数。`persist` 存放跨版本保留的配置，是另外两者没有的设计。
 
-本机核实：`scoop --version` 输出 `Current Scoop version: ... Bump to version 0.5.3`；`scoop config` 显示 `root_path` 为 `C:\Users\lzh\scoop`、`scoop_repo` 指向 GitHub 上的 Scoop 仓库。`scoop update *` 更新全部应用，`scoop cleanup *` 清理旧版本。
+`scoop --version` 输出当前版本并提示可升级（当时为 0.5.3）；`scoop config` 显示 `root_path` 为用户目录下的 `scoop`、`scoop_repo` 指向 GitHub 上的 Scoop 仓库。`scoop update *` 更新全部应用，`scoop cleanup *` 清理旧版本。
 
 代价很直接：需要注册表的软件装不了或装了不工作——服务、Shell 扩展、要写 HKLM 的驱动类工具都属此类；GUI 覆盖也不如另外两者。
 
@@ -857,7 +857,7 @@ Guix 与 Nix 同源（构建守护进程、store 哈希机制、沙箱思路都�
 
 #### 容器与虚拟机
 
-把系统包管理的问题外包给镜像是另一条路：镜像天然一次性、可重建，回滚靠换 tag 或 digest，隔离靠命名空间——比任何“共存策略”都彻底。代价是镜像内的包级状态不可回滚（换层就是换整个环境）、锁粒度从 lockfile 变成 digest、基础镜像本身成了需要长期维护的依赖。对“多个管理器打架”这类问题，容器是回避而不是解决；什么时候该回避、什么时候该正面解决，见第 30 章与第 38 章。
+把系统包管理的问题外包给容器镜像是另一条路：容器镜像天然一次性、可重建，回滚靠换 tag 或 digest，隔离靠命名空间——比任何“共存策略”都彻底。代价是镜像内的包级状态不可回滚（换层就是换整个环境）、锁粒度从 lockfile 变成 digest、基础镜像本身成了需要长期维护的依赖。对“多个管理器打架”这类问题，容器是回避而不是解决；什么时候该回避、什么时候该正面解决，见第 30 章与第 38 章。
 
 > 一句话总结：分层放置、看 PATH 定胜负、绝不覆盖系统运行时，是共存的全部规则。
 
@@ -1040,23 +1040,23 @@ myapp = "myapp.cli:main"
 
 **PDM** 与 **Hatch** 是同一层里的另两个选择。PDM 强调同时兼容 PEP 621 与 `[dependency-groups]`，并能导出 `requirements.txt` 给不认 `pyproject.toml` 的部署环境；Hatch 的核心是构建后端 `hatchling` 加可声明的环境矩阵，更偏项目任务编排而非依赖求解。
 
-**uv** 是 Rust 实现的一体化工具，把这些前端、锁文件、venv、Python 版本安装、`pipx` 式工具运行收进了一个二进制。两个关键设计：解析器基于 **PubGrub**（第 3 章讨论的冲突学习型算法），并且生成**跨平台通用锁文件** `uv.lock`——不像 `pip-compile` 那样每个平台各锁一份。
+**uv** 是 Rust 实现的一体化工具，把这些前端、锁文件、venv、Python 版本安装、`pipx` 式工具运行收进了一个二进制。两个关键设计：求解器基于 **PubGrub**（第 3 章讨论的冲突学习型算法），并且生成**跨平台通用锁文件** `uv.lock`——不像 `pip-compile` 那样每个平台各锁一份。
 
 迁移路径是 `uv pip` 这层兼容接口：`uv pip install`、`uv pip compile`、`uv pip sync` 的参数尽量贴近 `pip`/`pip-tools`，不用重写脚本。取舍是：`uv pip` 默认仍按当前环境求解、不产生 `uv.lock`（那要 `uv lock` + `uv sync`），所以它解决的是“快”，不自动解决“可复现”；要可复现就得接受 uv 的项目模型，而不是只换命令前缀。
 
 截至 2026 年中，uv 的版本仍在 0.x 阶段（PyPI 上为 0.12.x 系列），但已被声明为生产就绪，并把 0.x 的次版本号当作可能的破坏性变更边界——升级前值得读 changelog。Poetry 则在 2.x 系列。这两个事实都易变，使用前以官方文档为准。
 
-#### 为什么 pip 的解析曾经那么慢
+#### 为什么 pip 的求解曾经那么慢
 
 “pip 装得慢”经常被归因于 Python 慢，这不准确。真实原因有三层，按影响排序：
 
-**一，回溯求解需要元数据，而元数据曾经必须下载整包才能拿到。** pip 在 20.3 之前用的是“只取最新版”的贪心解析，20.3 起默认换成带回溯的解析器，遇到冲突会退回尝试别的版本。正确性大幅提升，代价是它要读取大量候选版本的依赖声明。在 PEP 658 之前，PyPI 的 Simple API 只提供文件链接，要读 `.dist-info/METADATA` 就得把整个 wheel 下下来——解析一个包等于下载几十个 wheel。PEP 658 增加了紧随其后的 `.metadata` 文件，pip 也支持用 HTTP range 请求只取 zip 中央目录里的那一段；但**只发 sdist 的包没有这个便利**，仍要下载甚至构建，这就是某些包解析特别慢的原因。
+**一，回溯求解需要元数据，而元数据曾经必须下载整包才能拿到。** pip 在 20.3 之前用的是“只取最新版”的贪心求解，20.3 起默认换成带回溯的求解器，遇到冲突会退回尝试别的版本。正确性大幅提升，代价是它要读取大量候选版本的依赖声明。在 PEP 658 之前，PyPI 的 Simple API 只提供文件链接，要读 `.dist-info/METADATA` 就得把整个 wheel 下下来——求解一个包等于下载几十个 wheel。PEP 658 增加了紧随其后的 `.metadata` 文件，pip 也支持用 HTTP range 请求只取 zip 中央目录里的那一段；但**只发 sdist 的包没有这个便利**，仍要下载甚至构建，这就是某些包求解特别慢的原因。
 
-**二，回溯本身在冲突严重时是指数级的**（第 3 章）。约束互相矛盾的依赖图会让解析器反复试错，典型表现是输出不断刷新的 “Downloading …” 与最终一句 `ResolutionImpossible`。
+**二，回溯本身在冲突严重时是指数级的**（第 3 章）。约束互相矛盾的依赖图会让求解器反复试错，典型表现是输出不断刷新的 “Downloading …” 与最终一句 `ResolutionImpossible`。
 
 **三，大包的体积与网络。** torch 这类包的 wheel 动辄几百 MB 到数 GB，这一步耗时与求解器无关。
 
-uv 之所以快，是同时在这三层上做了事：Rust 实现与并行下载只是表象，更关键的是它优先读 PEP 658 元数据、激进缓存、用 PubGrub 减少无效回溯、并且用硬链接/写时复制从全局缓存“安装”（第 6 章里 pnpm 的同类思路）。所以在依赖图复杂、需要多次解析的项目上，两者的差距比在简单项目上大得多。
+uv 之所以快，是同时在这三层上做了事：Rust 实现与并行下载只是表象，更关键的是它优先读 PEP 658 元数据、激进缓存、用 PubGrub 减少无效回溯、并且用硬链接/写时复制从全局缓存“安装”（第 6 章里 pnpm 的同类思路）。所以在依赖图复杂、需要多次求解的项目上，两者的差距比在简单项目上大得多。
 
 #### conda / mamba / pixi：另一条路线
 
@@ -1097,7 +1097,7 @@ error: externally-managed-environment
 | CI 冻结安装 | `pip install --require-hashes -r req.txt` | `uv sync --locked` |
 | 导出兼容锁 | `pip-compile --generate-hashes` | `uv export --format requirements-txt` |
 
-`--locked` 的含义是“锁文件与清单不一致就直接失败”，这正是 CI 想要的语义；`uv sync --frozen` 则是“不重新解析，直接用现有锁文件装”，两者别混。
+`--locked` 的含义是“锁文件与清单不一致就直接失败”，这正是 CI 想要的语义；`uv sync --frozen` 则是“不重新求解，直接用现有锁文件装”，两者别混。
 
 #### 常见坑
 
@@ -1127,7 +1127,7 @@ error: externally-managed-environment
 
 Cargo 假定 crate 遵守 SemVer。`bitflags = "1.0"` 的含义是 `>=1.0.0,<2.0.0`；只要能统一，Cargo 会尽量复用同一个版本，以减少编译时间和让类型在 API 之间可以互换。`0.x` 是特例：`^0.1.2` 的实际范围是 `>=0.1.2,<0.2.0`，前导非零段才定义兼容性。这是承认 0.x 天然不稳定，也意味着升级到下一个次版本就可能是破坏性变更。
 
-解析器版本按 edition 演进（截至 2026 年）：`edition = "2021"` 默认 resolver v2，它改变了 feature 与 target 的合并方式；`edition = "2024"` 默认 resolver v3（resolver v3 需要 Rust 1.84+，而 edition 2024 本身需要 Rust 1.85+），它把 `resolver.incompatible-rust-versions` 的默认值从 `allow` 改成 `fallback`。也就是说 v3 的主要变化不是 feature，而是让解析器倾向选择不超出 `rust-version` 声明的依赖版本。
+求解器版本按 edition 演进（截至 2026 年）：`edition = "2021"` 默认 resolver v2，它改变了 feature 与 target 的合并方式；`edition = "2024"` 默认 resolver v3（resolver v3 需要 Rust 1.84+，而 edition 2024 本身需要 Rust 1.85+），它把 `resolver.incompatible-rust-versions` 的默认值从 `allow` 改成 `fallback`。也就是说 v3 的主要变化不是 feature，而是让求解器倾向选择不超出 `rust-version` 声明的依赖版本。
 
 #### features 合并是抱怨的源头
 
@@ -1207,7 +1207,7 @@ Maven 用坐标（groupId/artifactId/version）标识依赖，用固定的构建
 
 依赖版本的仲裁规则叫最近优先（nearest definition wins）：选依赖树里离项目最近的那个版本；两个版本深度相同时，先声明的那一条胜出。官方文档的例子是 A → B → C → D 2.0 与 A → E → D 1.0，因为经过 E 的路径更短，D 1.0 会被选中。
 
-这为什么会导致运行时错误而不是解析失败？因为仲裁一定会选出**一个**版本，从不因为冲突而中止构建。被淘汰的版本里存在的类就成了“编译期能引用、运行时不存在”：编译时 classpath 上恰好有那个类，运行时挂载的 jar 里没有，于是抛 `NoClassDefFoundError` 或 `ClassNotFoundException`。更麻烦的是方法签名变化——两个版本都有这个类，但方法不同，报错位置和真实原因相隔很远。
+这为什么会导致运行时错误而不是求解失败？因为仲裁一定会选出**一个**版本，从不因为冲突而中止构建。被淘汰的版本里存在的类就成了“编译期能引用、运行时不存在”：编译时 classpath 上恰好有那个类，运行时挂载的 jar 里没有，于是抛 `NoClassDefFoundError` 或 `ClassNotFoundException`。更麻烦的是方法签名变化——两个版本都有这个类，但方法不同，报错位置和真实原因相隔很远。
 
 根本原因是 JVM 类路径没有原生隔离机制（模块系统和自定义类加载器是绕行方案，但代价大），所以“选一个版本”是框架层面的必然，而不是 Maven 的懒惰。
 
@@ -1447,7 +1447,7 @@ mix deps.get --check-locked
 dart pub outdated
 ```
 
-**Swift（SwiftPM 与 CocoaPods）。** 同一个工程里两套依赖机制同时存在是常态，冲突通常发生在原生依赖的版本约束和构建方式上；SwiftPM 用 `Package.resolved` 记录解析结果，用 `swift package resolve` 复现。
+**Swift（SwiftPM 与 CocoaPods）。** 同一个工程里两套依赖机制同时存在是常态，冲突通常发生在原生依赖的版本约束和构建方式上；SwiftPM 用 `Package.resolved` 记录求解结果，用 `swift package resolve` 复现。
 
 ```bash
 swift package resolve
@@ -1459,7 +1459,7 @@ swift package resolve
 renv::restore()
 ```
 
-**Julia（Pkg）。** 环境由 `Project.toml`（直接依赖）加 `Manifest.toml`（完整解析结果，含版本与哈希）两文件描述，项目目录就是环境，`Pkg.instantiate()` 按 manifest 精确还原。
+**Julia（Pkg）。** 环境由 `Project.toml`（直接依赖）加 `Manifest.toml`（完整求解结果，含版本与哈希）两文件描述，项目目录就是环境，`Pkg.instantiate()` 按 manifest 精确还原。
 
 ```julia
 using Pkg; Pkg.instantiate()
@@ -1512,7 +1512,7 @@ Set-PSResourceRepository -Name PSGallery -Trusted
 | 语言 | 工具 | 锁文件 | 求解策略 |
 |---|---|---|---|
 | JS | npm / yarn / pnpm | package-lock.json / yarn.lock / pnpm-lock.yaml | 回溯 + 扁平化提升，冲突时嵌套 |
-| Python | pip、venv、uv、Poetry、conda | uv.lock / poetry.lock（conda 侧用 conda-lock 或 `--explicit`） | pip 20.3 起为带回溯的解析；uv、Poetry 用 PubGrub |
+| Python | pip、venv、uv、Poetry、conda | uv.lock / poetry.lock（conda 侧用 conda-lock 或 `--explicit`） | pip 20.3 起为带回溯的求解；uv、Poetry 用 PubGrub |
 | Rust | Cargo | Cargo.lock | 深度优先回溯 + 冲突缓存（非 PubGrub）；resolver v2/v3 区分 feature 与 target |
 | Go | go 命令 | go.sum 加 go.mod 的精确 require | 最小版本选择（MVS），无回溯 |
 | JVM | Maven / Gradle | 默认不生成（Gradle 可显式启用） | Maven 最近优先、Gradle 默认取最高版本；遇冲突不报错，静默选一个 |
@@ -1533,7 +1533,7 @@ Set-PSResourceRepository -Name PSGallery -Trusted
 | Python | venv 或 conda 前缀 | PyPI 先到先得，现在支持 Trusted Publishing | 有：sdist 构建执行后端代码 | 缺 wheel 就得本地编译；PEP 668 拦系统安装 |
 | Rust | 源码编译进 target 目录 | crates.io 无命名空间 | build.rs 在构建期执行 | feature 合并导致意外启用 |
 | Go | 模块缓存，全局共享只读 | 代理协议，无中心所有权概念 | 无标准钩子，靠代码生成 | replace 指令滥用、间接依赖膨胀 |
-| JVM | 全局本地仓库加本地缓存 | Maven Central 不可变 | 插件可在构建期下载并执行任意代码 | 运行时缺类而非解析失败 |
+| JVM | 全局本地仓库加本地缓存 | Maven Central 不可变 | 插件可在构建期下载并执行任意代码 | 运行时缺类而非求解失败 |
 | .NET | 全局包缓存，按项目配置 | nuget.org，签名可验 | 有：build 目标可执行代码 | 缓存中毒、源顺序导致同名包选错 |
 | C/C++ | 构建目录或安装前缀 | Conan Center、vcpkg registry，均可自建 | 全在构建期，等价于执行代码 | ABI 与 libc 不兼容，见第 25 章 |
 | Ruby | 全局 gem 集合，或 vendor/bundle | rubygems.org，版本号永不复用 | 原生扩展编译、extconf | 依赖系统 gem 而漏掉 bundle exec |
@@ -1573,11 +1573,15 @@ Set-PSResourceRepository -Name PSGallery -Trusted
 
 桌面应用有一个发行版包管理器解决不了的问题：**应用与系统库的版本节奏不一致**。发行版大约每半年（Fedora）到两年（Debian、Ubuntu LTS）才发布一次，而浏览器、IDE、设计工具可能每两周更新一次。让上游为每个发行版各打一份包，成本落在应用作者身上；让用户等发行版升级，体验落在用户身上。
 
-Flatpak、Snap、AppImage 是对这个问题的三种不同回答，共同点是**把运行时也一起打包**，不再依赖系统提供依赖。
+Flatpak、Snap、AppImage 是对这个问题的三种不同回答，共同点是**把运行时也一起打包**，不再依赖系统提供依赖。在这个共同点之下，三者的形态、隔离与更新策略差别很大；此外还有几种更早或更激进的答案，值得放在一起看。
 
 #### Flatpak：运行时 + 沙箱 + portal
 
-Flatpak 把应用与它依赖的运行时（runtime）分开打包，多个应用共享同一个 runtime，因此不会每个应用各带一份 GTK 或 Qt。应用运行在沙箱里（基于 bubblewrap），要访问文件、网络、设备，需要权限声明，用户可以通过 `flatpak override --user` 调整。
+2015 年 Alexander Larsson 以 xdg-app 起步，2016 年更名 Flatpak，现在由 freedesktop.org 社区维护。它的核心设计是把**应用**与**运行时**（runtime）拆开：应用以反向域名标识（`org.gnome.Builder`），运行时是 `org.gnome.Platform`、`org.kde.Platform` 这类带版本分支（如 `46`、`47`）的基础环境，里面是 GTK/Qt、字体与基础库。多个应用共享同一份运行时，因此不会每个应用各带一份 GTK。
+
+存储层用 OSTree，文件按内容寻址，去重与增量更新是天然结果，`flatpak update` 一次更新所有应用与运行时。安装后 `.desktop`、图标、MIME 关联由 Flatpak 自动写入，这一点与系统包管理器一致，也是它与 AppImage 的实质差别。
+
+沙箱基于 bubblewrap 的命名空间，应用要访问文件、网络、设备，必须在 manifest 里声明（`finish-args`），用户可以覆盖：
 
 ```bash
 flatpak install flathub org.gnome.Builder
@@ -1586,19 +1590,100 @@ flatpak update
 flatpak override --user --filesystem=~/projects org.example.App
 ```
 
-它的优点是技术中立、Flathub 集中分发、运行时共享减少了重复。代价是磁盘（可能同时存在多个 runtime 版本）、沙箱带来的文件访问摩擦，以及主题与字体集成需要额外工作。
+沙箱里的应用打开文件、打印、发通知，走 `xdg-desktop-portal`：宿主弹出文件选择器，应用只拿到被选中的路径，而不是整个家目录。这就是为什么 Flatpak 应用用起来会“隔”一层。
+
+代价同样是结构性的：磁盘上可能并存多个运行时版本；沙箱会让“把路径传进去”这类操作变麻烦；GTK 主题与字体要靠额外的扩展包才能对上宿主观感。
 
 #### Snap：守护进程与自动更新
 
-Snap 由 `snapd` 守护进程管理，自动更新是默认行为，隔离分严格（strict）与经典（classic）两种模式。它由 Canonical 运营商店，后端高度中心化。
+Snap 由 `snapd` 守护进程管理，镜像本身是 squashfs，自动更新是默认行为，隔离靠 AppArmor 与 seccomp，分严格（strict）与经典（classic）两种模式。它由 Canonical 独家运营商店，后端高度中心化。
 
 它的优点是跨发行版一致、更新自动化、服务器端也有使用场景。争议同样明确：自动更新的时间窗口不可控（生产环境尤其敏感）、首次启动速度受 squashfs 挂载影响、商店中心化意味着分发权集中在一家公司。企业内网部署通常需要自建 Snap Store 代理。
 
-#### AppImage：单文件，无依赖解析
+Snap 与 Flatpak 的分歧不在技术目标，而在治理：一边是单一公司，一边是社区基金会加 Flathub。实践中真正的抱怨大多来自治理后果，而不是格式本身。
 
-AppImage 是“把应用和它的库打进一个可执行文件”。它不需要安装、不需要 root、在很老的系统上也能跑，这是它最大的价值。
+#### AppImage：单文件，不解决依赖
 
-代价是没有基础设施：默认没有更新机制（除非应用内置了更新组件）、没有系统集成（菜单、文件关联要自己处理）、体积大，而且**安全修复只能靠用户手动换文件**。它适合“一次性工具”和“对老旧环境兼容”的场景，不适合当作长期维护的分发方式。
+AppImage 是“把应用和它的库打进一个可执行文件”。它的形态是一个 ELF 文件，尾部内嵌 squashfs（type 2），运行时通过 FUSE 把镜像挂到临时目录再执行 `AppRun`，所以 `chmod +x` 之后就能直接跑。
+
+```bash
+chmod +x Tool-x86_64.AppImage
+./Tool-x86_64.AppImage
+```
+
+它不需要安装、不需要 root、在很老的系统上也能跑，这是它最大的价值。适合“一次性工具”“绿色版”和“给老发行版发一个二进制”的场景。
+
+代价是几乎放弃了所有基础设施：默认没有更新机制（除非应用内置了更新组件，如 AppImageUpdate）、没有系统集成（菜单、文件关联要自己处理或依赖第三方工具）、体积大，而且**安全修复只能靠用户手动换文件**。最低系统要求由打包时链接的 glibc 版本决定，打高了在老系统上起不来；新版发行版不再默认带 `libfuse2` 时，运行会直接报错，可以退回 `--appimage-extract` 解包再跑。
+
+#### 更早的两种回答：0install 与厂商自建源
+
+在 Flatpak 之前，同一个问题已经有两个答案。
+
+**0install（Zero Install）** 2005 年前后问世，设计上比 Flatpak 更激进：应用用 URL 而不是包名标识，feed 文件声明版本与依赖，全局缓存按内容寻址，多个应用共享同一份库，而且完全去中心化。它有命令行，也有图形界面与桌面集成，Linux、macOS、Windows 都能跑。没成的原因不在设计：没有厂商愿意为它发布 feed，也没有中心商店承担审核与 CDN，用户遇到问题时无处可查。这是应用分发工具最典型的失败方式——技术方向正确，但缺少把开发者与用户连起来的基础设施。
+
+**厂商自建源**是另一个答案，也是 Flatpak 出现前的默认做法：Chrome、VS Code、Docker CE 都同时发布 `.deb` 与 `.rpm`，并维护自己的 apt/yum 仓库与签名密钥，用户加一行源地址、导入一个 key 就算装好。它解决了版本节奏问题，代价是把分发成本摊给每个厂商，而用户机器上会累积一堆第三方密钥与源配置。第五部分讨论的供应链问题，有一部分就是从这些源配置开始的。
+
+#### 闭包与单文件：Nix、静态链接与 Apptainer
+
+**Nix 与 Guix** 把依赖闭包做成第一等公民（机制见第 17 章）。从分发角度看，`/nix/store` 里的每个路径都自带完整依赖，运行时互不干扰，同一应用的不同版本可以并存，回滚是原子操作。`nix run nixpkgs#gimp` 就是一次性的应用启动，不安装、不留痕。代价是它不遵循 FHS，很多按 `/usr/lib` 写死的二进制在 NixOS 上跑不起来；`nix bundle` 能把闭包压成自包含可执行文件，思路成立，工具链仍偏实验。
+
+**静态链接**是最朴素的版本：Go、Rust 的 musl target、Zig 默认产出单文件可执行，不依赖任何运行时。代价是证书、NSS、时区数据这类“运行时资源”要自己处理，体积也压不下去。
+
+**Apptainer（原 Singularity）** 在形态上最接近 AppImage：整个用户态装进一个 `.sif` 文件，节点上有 Apptainer 就能跑，不需要 root，也不需要安装依赖。它长在 HPC 场景，因为集群上既不能装包也不能常驻 Docker daemon。2021 年从 Singularity 分叉、迁入 Linux Foundation 后改名 Apptainer。从“单文件自带环境”这个维度看，它比 AppImage 做得更彻底，只是不在桌面生态里。
+
+#### 把容器当应用跑：Distrobox 与 Steam Runtime
+
+**Distrobox 与 toolbox** 是这几年实际增长最快的方案：用 podman 起一个 Ubuntu 或 Arch 容器，与宿主共享 home、`/tmp`、显卡设备和 D-Bus，再把命令与 `.desktop` 导出到宿主。
+
+```bash
+distrobox create --image archlinux:latest --name arch
+distrobox enter arch
+```
+
+它解决的是 Flatpak 不愿碰的问题——跑别的发行版的包，包括 AUR 和只在旧版本里存在的工具。代价同样明确：它本质上是“在容器里装了一整套发行版”，不是给终端用户的成品，容器与宿主的库版本差异仍然会制造奇怪的 bug。
+
+**游戏领域**走得更早。Steam Runtime 从 2014 年起就给游戏提供固定的库集合，2018 年后的 Soldier 运行时与 pressure-vessel 改成了容器化实现；Bottles、Lutris 用同一思路管理 Wine 前缀。自带运行时在桌面社区还靠 Flatpak 推动，在游戏里已经是运行多年的基础设施。
+
+#### 边界：哪些机制不属于这一层
+
+**rpm-ostree**（Fedora Silverblue、Kinoite）与 openSUSE MicroOS 经常和 Flatpak 一起出现，但它们管的是**系统**：根文件系统不可变，系统更新是镜像式的原子替换，用户应用仍然交给 Flatpak。它们回答的是“系统怎么升级”，不是“应用怎么分发”。
+
+**bubblewrap、firejail** 只提供隔离，不负责分发与更新，装什么仍由发行版或用户决定。把它们和 Flatpak 混为一谈，会得出“沙箱就等于应用分发”的错误结论。
+
+#### 应用分发机制对比
+
+<div style="overflow-x:auto">
+
+| 机制 | 分发单位 | 运行时 | 沙箱 | 更新 | 适合场景 |
+|---|---|---|---|---|---|
+| apt / dnf | 包 | 系统提供 | 无 | 系统升级 | 系统组件、驱动、基础工具 |
+| Flatpak | 应用 + 共享运行时 | 自带 | bubblewrap + portal | `flatpak update` 统一 | 桌面应用日常分发 |
+| Snap | snap | 自带，共享 base | AppArmor + seccomp | 自动、后台 | 跨发行版一致 |
+| AppImage | 单个文件 | 全部打包 | 无 | 无内置 | 一次性工具、老旧系统 |
+| 0install | feed + 共享缓存 | 共享 | 无 | 按 feed | 去中心化分发（已边缘化） |
+| Nix | 闭包 | 自带 | 无（可叠加） | 按代际切换 | 开发环境、可复现 |
+| Distrobox | 容器 | 整个发行版 | 容器 | 发行版内更新 | 跑其他发行版的包 |
+| rpm-ostree | 系统镜像 | 不涉及 | 不涉及 | 镜像原子更新 | 不可变系统 |
+
+</div>
+
+#### 跨平台对照
+
+同一套问题每个平台都遇到过，答案也收敛到相近的形状：
+
+| 平台 | 同类机制 |
+|---|---|
+| macOS | `.app` bundle 自带 Framework，签名与公证后分发；Homebrew cask 负责获取与更新；Sparkle 提供应用内更新 |
+| Windows | MSIX 提供打包、签名与部分虚拟化（注册表与文件重定向），可走商店或旁加载；Scoop、PortableApps 走解压即用路线；winget 提供仓库式获取 |
+| Android | APK + 商店 + 权限沙箱，是“商店分发 + 沙箱”组合最早成规模的实践 |
+
+可见“应用分发层”不是 Linux 独有的发明。各平台都在“系统提供依赖”和“应用自带依赖”之间划线，最后大多收敛到**商店 + 沙箱 + 自动更新**，因为只有这个组合能同时满足用户、开发者与平台三方。
+
+#### 为什么最后剩下 Flatpak 和 Snap
+
+不是技术更优。0install 的设计在很多方面更干净，AppImage 更简单，Nix 更严谨。活下来的是有**分发基础设施**的两个：Flathub 与 Snap Store 提供了签名、CDN、审核、桌面集成与厂商关系，这些恰恰是纯格式规范给不了的。
+
+这也解释了 AppImage 的处境：作为格式它很成功，作为生态几乎没有进展——没有商店，就没有统一的自动更新，也就没有安全修复的通道。第五部分讨论的供应链问题，在这里表现为“用户只能自己记得去换文件”。
 
 #### 它们与系统包管理器的关系
 
@@ -1656,7 +1741,7 @@ COPY --from=builder /out/app /app
 ENTRYPOINT ["/app"]
 ```
 
-这不仅缩小体积，更是安全上的改进：**安装脚本、构建工具、包管理器缓存都留在 builder 阶段**，运行镜像里没有它们（呼应第 8 章）。distroless 与 scratch 把这条路走到极致——没有 shell、没有包管理器，攻击者拿到 RCE 也没有现成的工具可用（但仍能发起网络请求或自带载荷）。代价是调试困难：没有 shell 就得靠临时调试容器或静态编译的调试工具。
+这不仅缩小体积，更是安全上的改进：**安装脚本、构建工具、包管理器缓存都留在 builder 阶段**，运行镜像里没有它们（呼应第 8 章）。distroless 与 scratch 把这条路走到尽头——没有 shell、没有包管理器，攻击者拿到 RCE 也没有现成的工具可用（但仍能发起网络请求或自带载荷）。代价是调试困难：没有 shell 就得靠临时调试容器或静态编译的调试工具。
 
 #### 镜像里的“包管理”问题
 
@@ -1677,7 +1762,7 @@ ENTRYPOINT ["/app"]
 
 Bazel 把每个构建步骤建模成**动作（action）**，输入与输出都显式声明。因为输入完全声明，动作可以在沙箱里执行、可以被哈希、结果可以被缓存——输入没变就不重跑，本地或远程缓存命中就直接取产物。
 
-规则（rule）定义“如何构建某类目标”，目标（target）通过依赖关系组成图。外部依赖由 bzlmod（`MODULE.bazel`）管理，并有锁文件保证解析结果稳定。
+规则（rule）定义“如何构建某类目标”，目标（target）通过依赖关系组成图。外部依赖由 bzlmod（`MODULE.bazel`）管理，并有锁文件保证求解结果稳定。
 
 它的收益在大规模 monorepo 上非常明显：增量构建的正确性由机制保证（不是靠时间戳猜测）、多语言可以共用一套构建与缓存、CI 上能只重跑受影响的目标。代价也很明确：学习曲线陡、要为每种语言适配规则、构建描述文件的维护量不小，而且它的收益随仓库规模增长——小仓库用 Bazel 是纯负债。
 
@@ -2030,7 +2115,7 @@ SBOM（软件物料清单）的主流格式是 **SPDX** 与 **CycloneDX**。两�
 
 #### 1. 锁文件没提交，或与清单不同步
 
-**现象**：本地能跑，CI 或同事机器上装出来的版本不一样。**原因**：清单里的范围约束在不同时间会解析出不同结果；锁文件要么没进版本库，要么改了清单却没重新生成。**怎么办**：把锁文件当源码提交，改完清单立刻重新解析并在同一个 PR 里提交锁文件变化；CI 用冻结模式安装。
+**现象**：本地能跑，CI 或同事机器上装出来的版本不一样。**原因**：清单里的范围约束在不同时间会求解出不同结果；锁文件要么没进版本库，要么改了清单却没重新生成。**怎么办**：把锁文件当源码提交，改完清单立刻重新求解并在同一个 PR 里提交锁文件变化；CI 用冻结模式安装。
 
 #### 2. CI 用 install，本地用 ci（或反过来）
 
@@ -2046,7 +2131,7 @@ SBOM（软件物料清单）的主流格式是 **SPDX** 与 **CycloneDX**。两�
 
 #### 5. 跨平台锁文件差异
 
-**现象**：只能在某个平台复现的安装失败或依赖缺失。**原因**：可选依赖按平台解析（原生模块、平台专用二进制），不同平台生成或验证锁文件的结果不同；此外换行符与镜像差异也会造成哈希不匹配。**怎么办**：锁文件在 CI 覆盖的全部平台上生成或至少验证；不要把平台专用依赖手工删掉。
+**现象**：只能在某个平台复现的安装失败或依赖缺失。**原因**：可选依赖按平台求解（原生模块、平台专用二进制），不同平台生成或验证锁文件的结果不同；此外换行符与镜像源差异也会造成哈希不匹配。**怎么办**：锁文件在 CI 覆盖的全部平台上生成或至少验证；不要把平台专用依赖手工删掉。
 
 #### 6. 用范围版本，却从不升级
 
