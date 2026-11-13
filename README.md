@@ -10,7 +10,8 @@
 ├── content/
 │   ├── _index.md                   # 首页正文
 │   ├── about.md                    # 「关于」页面
-│   └── post/                       # 博客文章（Markdown）
+│   ├── post/                       # 已发布文章（Markdown）
+│   └── draft/                      # 未发布草稿（draft: true，不进生产构建）
 ├── themes/hugo-xmin/               # 主题（已改：terms.html 重命名为 taxonomy.html，适配 Hugo 0.166）         
 ├── .github/workflows/pages.yml     
 └── public/                         # 构建产物（不要手动改）
