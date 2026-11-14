@@ -295,9 +295,99 @@ MSVC STL 团队在公开讲座里把 1.5 到 2 之间的因子描述为速度与
 
 ---
 
-## 5. 修改操作的实现路径
+## 5. 实现
 
-### 5.1 尾部插入的两条路径
+### 5.1 最小骨架
+
+去掉接口细节之后，`vector` 的实现只需要三个指针、一个分配器与两个循环。下面是一个可读的骨架，略去头文件与全部 ABI 细节：
+
+```cpp
+template<class T, class A = std::allocator<T>>
+class vector_sketch {
+  using traits = std::allocator_traits<A>;
+
+public:
+  vector_sketch() = default;
+
+  ~vector_sketch() {
+    destroy_all();
+    if (begin_ != nullptr)
+      traits::deallocate(alloc_, begin_, capacity());
+  }
+
+  void push_back(const T& value) {
+    if (size() == capacity())
+      reallocate(size() + 1);
+    traits::construct(alloc_, end_, value); // 构造失败时元素个数不变
+    ++end_;
+  }
+
+private:
+  T* begin_ = nullptr;
+  T* end_   = nullptr;
+  T* cap_   = nullptr;
+  [[no_unique_address]] A alloc_{};
+
+  std::size_t size() const {
+    return begin_ != nullptr ? static_cast<std::size_t>(end_ - begin_) : 0;
+  }
+  std::size_t capacity() const {
+    return begin_ != nullptr ? static_cast<std::size_t>(cap_ - begin_) : 0;
+  }
+
+  void destroy_all() {
+    while (end_ != begin_)
+      traits::destroy(alloc_, --end_);
+  }
+
+  void reallocate(std::size_t request) {
+    std::size_t new_cap = capacity() != 0 ? capacity() * 2 : 1;
+    if (new_cap < request)
+      new_cap = request;
+
+    T* new_begin = traits::allocate(alloc_, new_cap);
+    T* new_end   = new_begin;
+    try {
+      for (T* p = begin_; p != end_; ++p)
+        traits::construct(alloc_, new_end++, std::move_if_noexcept(*p));
+    } catch (...) {
+      while (new_end != new_begin)
+        traits::destroy(alloc_, --new_end);
+      traits::deallocate(alloc_, new_begin, new_cap);
+      throw;
+    }
+
+    destroy_all();
+    if (begin_ != nullptr)
+      traits::deallocate(alloc_, begin_, capacity());
+    begin_ = new_begin;
+    end_   = new_end;
+    cap_   = new_begin + new_cap;
+  }
+};
+```
+
+骨架只保留主路径：容量检查、末尾构造、重分配、析构与归还。拷贝构造、移动构造、移动赋值、`insert`/`erase`、分配器传播、常量求值与调试钩子都在后文展开，它们不改变上面的结构。
+
+为了突出重分配路径，骨架把新元素的构造放在提交之后；真实实现把新元素构造纳入同一个守卫，并按第 5.4 节的顺序先构造新元素、再搬迁旧元素。
+
+三个指针的表示让 `size()` 退化为一次相减，让「是否还有剩余容量」退化为 `end_ != cap_`；分配器通过 `allocator_traits` 访问，元素构造与析构不直接调用 `new`/`delete`。这两点是实现的主干。
+
+### 5.2 分配与对象生命周期
+
+`vector` 需要的是「未构造的存储」，不能直接使用 `new T[n]`：数组形式会默认构造全部元素，并要求 `T` 可默认构造。实现的流程分成三步：
+
+- 用 `allocator_traits<A>::allocate(n)` 取得能容纳 n 个元素的原始存储。
+- 用 `allocator_traits<A>::construct(p, args...)` 在指定位置构造元素，用 `destroy(p)` 析构元素。
+- 用 `allocator_traits<A>::deallocate(p, n)` 归还存储，n 必须是当初分配的容量计数，不能是 `size()`。
+
+三家实现的分工相同，只是封装位置不同。libstdc++ 的 `_M_allocate`、`_M_create_storage`、`_M_deallocate` 分别负责分配、设置三个指针与归还（`bits/stl_vector.h:386`、`405`、`394`），n 为 0 时返回空指针。
+
+MSVC 用 `_Buy_raw` 分配、`_Change_array` 接管存储（`stl/inc/vector:2027`、`2061`），元素构造走 `_Alty_traits::construct`。libc++ 的 `__vallocate` 调用 `__allocate_at_least` 并写入布局（`__vector/vector.h:672`、`__vector/layout.h:377`）。
+
+`deallocate` 需要容量计数，这也是三指针表示的一个附带理由：容量始终可以从「容量末尾减起始」得到，不需要额外记录。析构路径通常还有快速分支：`T` 可平凡析构时跳过逐元素 `destroy`，直接归还存储。
+
+### 5.3 尾部插入的两条路径
 
 `push_back` 与 `emplace_back` 共享同一结构：容量足够时在当前末尾构造对象、把末尾指针加一；容量不足时走重分配路径。
 
@@ -305,7 +395,7 @@ libstdc++ 的慢路径是 `_M_realloc_insert`（`bits/vector.tcc:459`–`557`）
 
 关闭加固与调试检查时，热路径的成本是一次构造加一次指针自增，除容量比较外没有额外开销。慢路径的成本是分配、搬迁全部元素、释放旧存储，比例由增长因子决定。
 
-### 5.2 重分配的顺序
+### 5.4 重分配的顺序
 
 三家实现的重分配都按同一顺序，顺序本身有规范理由：
 
@@ -316,7 +406,7 @@ libstdc++ 的慢路径是 `_M_realloc_insert`（`bits/vector.tcc:459`–`557`）
 
 先构造新元素再搬迁旧元素，是为了处理 C++11 的别名情形：`v.push_back(v[0])` 的参数可能引用旧存储中的元素，先搬迁会让参数指向已被移走的对象。libstdc++ 在 `_M_realloc_insert` 内有一段注释说明这一点（`bits/vector.tcc:479`–`483`）。
 
-### 5.3 搬迁：移动、拷贝与重定位
+### 5.5 搬迁：移动、拷贝与重定位
 
 搬迁用哪种操作由类型属性决定：
 
@@ -329,7 +419,7 @@ libstdc++ 的慢路径是 `_M_realloc_insert`（`bits/vector.tcc:459`–`557`）
 
 libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`int`、`double` 与简单聚合类型因此走字节复制路径，代价是内存带宽；`std::unique_ptr`、`std::string` 这类不满足 trivial 但移动 `noexcept` 的类型走移动路径，代价是逐元素构造。这解释了为什么 `vector<int>` 的扩容通常比同字节数的 `vector<std::string>` 便宜。
 
-### 5.4 中间插入
+### 5.6 中间插入
 
 容量足够时，中间 `insert` 把插入点之后的元素整体后移一位，在空出的位置构造新元素。容量不足时走重分配，搬迁时把插入点之后的元素直接构造到偏移后的位置，避免先整体移位再插入。
 
@@ -337,7 +427,7 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 `insert` 的异常保证弱于尾部插入：由元素的拷贝构造、移动构造、赋值、移动赋值抛出的异常，标准允许留下效果（[draft][vector.modifiers]/2）。原因是后移与构造分步进行，中途失败时元素已经移动了一部分。
 
-### 5.5 erase 与 clear
+### 5.7 erase 与 clear
 
 `erase(pos)` 把 `pos` 之后的元素逐个赋值到前一位，再析构最后一个元素；实现通常把连续赋值优化成块拷贝。复杂度按赋值次数计，等于擦除点之后的元素数（[draft][vector.modifiers]/6）；析构次数等于被删元素数。
 
@@ -345,11 +435,59 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 复杂度上的差异可以推出耗时关系：`insert` 到中间只移动插入点之后的元素，`erase` 首元素要移动擦除点之后的全部元素，后者的元素移动次数约为前者的两倍；`pop_back` 只做一次析构与一次指针回退。
 
-### 5.6 一次插入多个元素
+### 5.8 一次插入多个元素
 
 范围版本的 `insert` 与 `insert_range`、`append_range`（C++23）在实现里通常合并为一次重分配。
 
 当前草案新增 `[vector.modifiers]/3`，把范围插入与迭代器对插入的「至多一次重分配」写成规范性要求，但有条件：`R` 建模 `approximately_sized_range` 且 `distance(rg) <= reserve_hint(rg)`，或 `R` 建模 `forward_range`。C++23 的文本没有这一段，同类内容以建议形式出现在范围构造的要求里。输入迭代器版本无法预先知道长度，可能触发多次重分配。
+
+### 5.9 特殊成员函数与 swap
+
+拷贝构造分配与源等大的存储，再逐个拷贝构造元素；中途抛异常时，已构造的元素由守卫析构（libstdc++ `vector(const vector&)` 用 `__uninitialized_copy_a`，`bits/stl_vector.h:621`–`629`；libc++ 用 `__make_exception_guard(__destroy_vector(*this))`，`__vector/vector.h:684`）。
+
+移动构造是 O(1)：窃取三个指针，并把源置空。libstdc++ 在 `_Vector_impl_data` 的移动构造里复制指针并清零源（`bits/stl_vector.h:111`–`115`），MSVC 用 `_Take_contents`（`stl/inc/vector:426`），libc++ 用布局的移动赋值工具。
+
+拷贝赋值在容量足够时复用存储、逐元素赋值；容量不足时分配新块、拷贝、交换后释放旧块。分配器是否随赋值传播由 `propagate_on_container_copy_assignment` 决定。
+
+移动赋值的分支更多：`propagate_on_container_move_assignment` 为真、`is_always_equal` 为真或两个分配器相等时，直接窃取缓冲区（libstdc++ 的 `_M_move_assign(true_type)`，`bits/stl_vector.h:2255`–`2261`；MSVC 在 `operator=` 里按 traits 分支，`stl/inc/vector:801`–`828`）；否则只能逐元素移动，再把源清空（libstdc++ `bits/stl_vector.h:2267`–`2279`）。
+
+`swap` 交换三指针，分配器按 `propagate_on_container_swap` 决定是否一起交换；`noexcept` 条件由 `propagate_on_container_swap` 与 `is_always_equal` 的析取给出。libstdc++ 的 `_M_swap_data`（`bits/stl_vector.h:128`）、MSVC 的 `_Swap_val`（`stl/inc/vector:419`）与 libc++ 布局的 `__swap`（`__vector/layout.h:397`）都只交换三个字段，不搬迁元素。
+
+析构函数销毁全部元素，再按容量归还存储。这三组特殊成员解释了为什么 `vector` 的移动通常是常数时间，而跨分配器的移动赋值会退化为线性时间。
+
+### 5.10 回滚守卫
+
+重分配与插入都要在异常时回到可用的状态。实现的做法统一为「把已构造区间与新存储记在守卫对象里」，异常传播时守卫的析构函数销毁已构造元素并归还存储。
+
+libstdc++ 用两个守卫：`_Guard_alloc` 负责在新存储未被接管时归还它（`bits/vector.tcc:477`），`_Guard_elts` 负责销毁已构造的元素（`bits/vector.tcc:512`–`531`）。搬迁成功后把守卫的目标改指向旧存储，再在成功路径上释放。
+
+MSVC 用 `_Reallocation_guard2`（`stl/inc/vector:628`–`644`），它保存分配器、新指针、新容量与已构造区间 `[_Constructed_first, _Constructed_last)`，析构时先 `_Destroy_range` 再 `deallocate`。
+
+libc++ 把暂存缓冲区本身做成 RAII 类型 `__split_buffer`：新元素与搬迁都在其中完成，析构时销毁已构造区间并归还内存；构造函数路径另外用 `__destroy_vector` 守卫处理元素构造失败。
+
+守卫的形状解释了第 6 章的结论：能回滚的前提是旧存储仍然完整。拷贝失败时旧元素未动，守卫只需清理新块；移动失败时旧元素可能已被改动，守卫无法恢复，异常保证因此降级。
+
+### 5.11 constexpr 与编译器协作
+
+C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实现用宏标记常量求值能力：libstdc++ 的 `_GLIBCXX20_CONSTEXPR`、MSVC 的 `_CONSTEXPR20`、libc++ 的 `_LIBCPP_CONSTEXPR_SINCE_CXX20`。同一份代码在运行期与常量求值期都必须合法。
+
+常量求值中的分配由编译器管理，求值结束即回收，因此常量 `vector` 不能作为运行期对象继续使用。某些运行期优化在常量求值中不可用：libstdc++ 的 `__relocate_a_1` 在 `std::is_constant_evaluated()` 为真时退回逐个移动构造，避免 `__builtin_memcpy`（`bits/stl_uninitialized.h:1384`–`1392`）；MSVC 在分配与内存复制路径上用 `_STD _Is_constant_evaluated()` 分支。
+
+这些分支不改变运行期语义，但要求实现把守卫、循环与指针运算都写成常量求值可走的形式，这也是新实现比旧实现多出一层宏与分支的原因之一。
+
+### 5.12 三家实现对照
+
+| 维度 | libstdc++ 16.2 | MSVC STL 145 | libc++ main |
+| --- | --- | --- | --- |
+| 布局 | 三指针 | 三指针，调试时加代理指针 | 三指针，可选尺寸布局 |
+| 增长 | `size + max(size, n)`，2 倍 | `cap + cap / 2`，1.5 倍 | `max(new, 2 * cap)`，2 倍 |
+| 分配精度 | 精确 n | `allocate_at_least` | `allocate_at_least` |
+| 重分配搬迁 | relocate 或 `move_if_noexcept` | `move_if_noexcept` 分支 | `__split_buffer` 加 relocation |
+| 回滚守卫 | `_Guard_alloc`、`_Guard_elts` | `_Reallocation_guard2` | `__split_buffer`、`__destroy_vector` |
+| `shrink_to_fit` | 条件收缩，不抛 | 精确收缩，可抛 | `noexcept`，容量可能仍大于 `size()` |
+| `vector<bool>` 字宽 | `unsigned long` | `unsigned int` | `size_type` |
+
+差异集中在工程取舍：ABI 布局、调试与加固、分配器的使用方式、常量求值支持。标准层的语义三家一致，跨实现的代码应只依赖标准契约。
 
 ---
 
