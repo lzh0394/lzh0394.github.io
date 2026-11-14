@@ -4,6 +4,8 @@ slug: "string-library-needs"
 date: "2026-11-14"
 categories: ["编程语言"]
 tags: ["C++", "字符串", "Unicode", "标准库"]
+series: "C++ 标准库"
+series_order: 3
 draft: false
 summary: "从标准与提案、三家实现、行业实践三条证据线，梳理十类 C++ 使用者对字符串库的需求差异、六层需求模型、现存方案的覆盖与缺口，以及标准演进最可能先落地的方向。"
 ---

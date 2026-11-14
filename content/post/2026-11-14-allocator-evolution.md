@@ -4,6 +4,8 @@ slug: "allocator-evolution"
 date: "2026-11-14"
 categories: ["编程语言"]
 tags: ["C++", "标准库", "分配器", "WG21"]
+series: "C++ 标准库"
+series_order: 2
 draft: false
 summary: "从 C++98 的容器类型参数，到 C++11 的 allocator_traits、C++17 的 pmr，再到 C++20 的 constexpr 与 C++23/26 的容量反馈：梳理分配器模型的五次演化、五组张力与三家实现的落地差异。"
 ---

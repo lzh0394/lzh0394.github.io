@@ -4,6 +4,8 @@ slug: "stl-components"
 date: "2026-11-14"
 categories: ["编程语言"]
 tags: ["C++", "标准库", "STL", "架构"]
+series: "C++ 标准库"
+series_order: 1
 draft: false
 summary: "按 L0–L12 分层梳理一个 C++ 标准库需要哪些组件、按什么顺序实现、工程配套占多大比重，并按经典 STL 子集、完整标准库、实现产品三档给出范围建议。"
 ---
