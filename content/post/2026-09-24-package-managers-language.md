@@ -10,8 +10,6 @@ draft: false
 summary: "包管理器系列第三篇：按语言生态梳理语言级包管理器——npm 及其对手、Python 工具链、Cargo、Go modules、Maven/Gradle、NuGet、C/C++ 的空白、Bundler 与 Composer、其余生态速览，末节对比设计取舍。"
 ---
 
-本系列共四篇：[（一）依赖管理的原理](/post/2026/09/24/package-managers-principles/)、[（二）系统级包管理器](/post/2026/09/24/package-managers-os/)、（三）语言级包管理器（本篇）、[（四）应用层、供应链与实践](/post/2026/09/24/package-managers-practice/)。
-
 目录（1 章，10 节）：
 
 | 章 | 标题 |

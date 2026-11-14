@@ -10,8 +10,6 @@ draft: false
 summary: "包管理器系列第四篇：应用分发层与工具链（Flatpak/Snap/AppImage、OCI 镜像、构建图、版本管理器、私有仓库）、供应链安全的威胁模型与防御，最后给出场景化选型与十二个常见陷阱。"
 ---
 
-本系列共四篇：[（一）依赖管理的原理](/post/2026/09/24/package-managers-principles/)、[（二）系统级包管理器](/post/2026/09/24/package-managers-os/)、[（三）语言级包管理器](/post/2026/09/24/package-managers-language/)、（四）应用层、供应链与实践（本篇）。
-
 目录（3 章，12 节）：
 
 | 章 | 标题 |

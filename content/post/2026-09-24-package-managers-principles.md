@@ -11,8 +11,6 @@ summary: "包管理器系列第一篇：把包管理器当成可分析的对象�
 aliases: ["/post/2026/09/24/package-managers/"]
 ---
 
-本系列共四篇：（一）依赖管理的原理（本篇）、[（二）系统级包管理器](/post/2026/09/24/package-managers-os/)、[（三）语言级包管理器](/post/2026/09/24/package-managers-language/)、[（四）应用层、供应链与实践](/post/2026/09/24/package-managers-practice/)。
-
 目录（3 章，9 节）：
 
 | 章 | 标题 |

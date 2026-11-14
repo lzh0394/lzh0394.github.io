@@ -10,8 +10,6 @@ draft: false
 summary: "包管理器系列第二篇：逐个拆解系统级包管理器——dpkg/apt、rpm/dnf、pacman/AUR、apk、Portage、Homebrew、winget/Scoop/Chocolatey、Nix/Guix，末节做横向对比与共存策略。"
 ---
 
-本系列共四篇：[（一）依赖管理的原理](/post/2026/09/24/package-managers-principles/)、（二）系统级包管理器（本篇）、[（三）语言级包管理器](/post/2026/09/24/package-managers-language/)、[（四）应用层、供应链与实践](/post/2026/09/24/package-managers-practice/)。
-
 目录（1 章，9 节）：
 
 | 章 | 标题 |
