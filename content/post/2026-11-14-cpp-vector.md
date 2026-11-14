@@ -17,9 +17,9 @@ summary: "以标准条款与三家实现源码为证据，拆解 std::vector 的
 
 异常保证的分界由元素类型决定。元素可拷贝，或移动构造 `noexcept`，尾部插入在扩容失败后才能回滚到原状；只可移动且移动可能抛的类型落在标准少见的「效果未指定」情形，因为旧存储已被破坏，没有通用的恢复办法。让移动构造与移动赋值保持 `noexcept`，是同时改善扩容与 `erase` 行为成本最低的一步。
 
-几何增长是摊销 O(1) 的必要条件：容量按因子 c 增长时，总搬迁次数约为 `c / (c - 1) * n`，因子 2 约 2n，因子 1.5 约 3n，固定增量则退化为 O(n²)。标准只规定复杂度，因子由实现选择：libstdc++ 与 libc++ 用 2 倍，MSVC 用 1.5 倍。因子小于 2 时，此前释放的块有机会被后续请求复用；等于 2 时释放块的总和永远小于下一次请求。1.5 的代价是更多次重分配与搬迁，2 倍的代价是更高的峰值内存。容量序列与 `shrink_to_fit` 的实际效果因此不可移植。
+几何增长是摊销 O(1) 的必要条件：容量按因子 c 增长时，元素构造总次数约为 `c / (c - 1) * n`，因子 2 约 2n，因子 1.5 约 3n，固定增量则退化为 O(n²)。标准只规定复杂度，因子由实现选择：libstdc++ 与 libc++ 用 2 倍，MSVC 用 1.5 倍。因子小于 2 时，此前释放的块有机会被后续请求复用；等于 2 时释放块的总和永远小于下一次请求。1.5 的代价是更多次重分配与元素构造，2 倍的代价是更高的峰值内存。容量序列与 `shrink_to_fit` 的实际效果因此不可移植。
 
-实现层的结构三家一致：三个指针、通过 `allocator_traits` 分配与构造、异常时用守卫回滚、重分配时先构造新元素再搬迁旧元素。差异集中在 ABI 布局、是否使用 `allocate_at_least`、`shrink_to_fit` 的精确性、`vector<bool>` 的字宽，以及调试与加固机制。这些都是工程取舍，标准层面的语义一致。
+实现层的结构三家一致：三个指针、通过 `allocator_traits` 分配与构造、异常时用守卫回滚、重分配时先构造新元素，再把旧元素构造到新存储。差异集中在 ABI 布局、是否使用 `allocate_at_least`、`shrink_to_fit` 的精确性、`vector<bool>` 的字宽，以及调试与加固机制。这些都是工程取舍，标准层面的语义一致。
 
 实际使用可以收敛成三条规则：
 
@@ -137,7 +137,7 @@ summary: "以标准条款与三家实现源码为证据，拆解 std::vector 的
 
 最后一句是 `vector` 主要的未指定情形。它对应的类型是「只可移动、移动可能抛」：拷贝被删除，`move_if_noexcept` 没有退路，实现只能移动；移动失败时新存储里已构造了一部分元素，旧存储的状态已不可恢复，标准因此不给保证。规避方式是让移动构造 `noexcept`，或者用 `reserve` 把扩容挪到不容易失败的位置。
 
-`reserve` 与 `shrink_to_fit` 的保证带同一个限定：由非 `Cpp17CopyInsertable` 类型的移动构造抛出的异常，不保证无效果（[draft][vector.capacity]/4、/9）。原因是重分配必须搬迁旧元素，搬迁失败时没有通用的安全回滚办法。
+`reserve` 与 `shrink_to_fit` 的保证带同一个限定：由非 `Cpp17CopyInsertable` 类型的移动构造抛出的异常，不保证无效果（[draft][vector.capacity]/4、/9）。原因是重分配必须把旧元素构造到新存储，构造失败时没有通用的安全回滚办法。
 
 ### 2.5 分配器感知
 
@@ -223,15 +223,15 @@ C++17 起 `vector` 可以用不完整类型实例化，前提是分配器满足�
 
 ### 4.1 几何增长的必要性
 
-`push_back` 的摊销常数时间依赖容量按几何级数增长。设每次扩容把容量乘 `c > 1`，容量从 1 开始，插入 n 个元素的总搬迁次数约为：
+`push_back` 的摊销常数时间依赖容量按几何级数增长。设每次扩容把容量乘 `c > 1`，容量从 1 开始，插入 n 个元素时，元素构造总次数约为：
 
 ```text
 1 + c + c^2 + ... + c^k ≈ c / (c - 1) * n
 ```
 
-`c = 2` 时约 2n 次搬迁，`c = 1.5` 时约 3n 次。两者都是 O(n)，均摊到每次插入是 O(1)。若每次只增加固定数量 `d`，搬迁总次数为 `n^2 / (2d)`，插入变成二次复杂度。
+`c = 2` 时约 2n 次元素构造，`c = 1.5` 时约 3n 次。两者都是 O(n)，均摊到每次插入是 O(1)。若每次只增加固定数量 `d`，元素构造总次数为 `n^2 / (2d)`，插入变成二次复杂度。
 
-这条推导给出两个结论：增长因子必须大于 1；因子越接近 1，搬迁越多，因子越大，浪费的容量越多。标准不规定因子，只规定复杂度。
+这条推导给出两个结论：增长因子必须大于 1；因子越接近 1，元素构造越多，因子越大，浪费的容量越多。标准不规定因子，只规定复杂度。
 
 ### 4.2 三家实现的增长因子
 
@@ -251,7 +251,7 @@ libstdc++ 的 `reserve` 直接按请求分配（`bits/vector.tcc:67`–`104`）�
 
 增长因子是实现的自由选择，差异来自不同的权衡。
 
-搬迁成本：因子为 2 时总搬迁约 2n，因子为 1.5 时约 3n。因子越大，扩容次数越少，搬迁越少。
+元素构造成本：因子为 2 时元素构造总次数约 2n，因子为 1.5 时约 3n。因子越大，扩容次数越少，元素构造越少。
 
 内存峰值：重分配期间新旧两块同时存在，峰值约为 `(1 + c) * capacity` 个元素的空间。因子 2 的峰值是 3 倍，因子 1.5 是 2.5 倍。
 
@@ -259,7 +259,7 @@ libstdc++ 的 `reserve` 直接按请求分配（`bits/vector.tcc:67`–`104`）�
 
 Folly 的 `FBVector` 文档（<https://github.com/facebook/folly/blob/main/folly/docs/FBVector.md>）把这一点写成「2 是理论上最差的因子」，并提到其他编译器把因子降到 1.5。复用能否发生还取决于分配器是否合并空闲块、地址是否连续，标准不作保证[推断]。
 
-容量浪费：因子越大，`size()` 与 `capacity()` 的差距可能越大。对内存敏感的场景，这个差距比搬迁成本更重要。
+容量浪费：因子越大，`size()` 与 `capacity()` 的差距可能越大。对内存敏感的场景，这个差距比元素构造成本更重要。
 
 ### 4.4 MSVC 的 1.5：来源与取舍
 
@@ -269,7 +269,7 @@ MSVC 的增长公式是 `capacity() + capacity() / 2`，源码注释只写 geome
 
 MSVC STL 团队在公开讲座里把 1.5 到 2 之间的因子描述为速度与内存占用的折中；可查到的只有二手转述，原始视频已从 Channel 9 下线，本文只把它当作工程判断。
 
-代价可以量化：因子为 2 时搬迁总量约 2n，1.5 时约 3n；到达 n 个元素的重分配次数从约 `log2(n)` 变成约 `log1.5(n)`，多出约 70%。MSVC 用更多的搬迁与重分配换取更低的峰值内存和更大的空闲块复用机会，这个取舍与 `_Calculate_growth` 的实现一致。
+代价可以量化：因子为 2 时元素构造总量约 2n，1.5 时约 3n；到达 n 个元素的重分配次数从约 `log2(n)` 变成约 `log1.5(n)`，多出约 70%。MSVC 用更多的元素构造与重分配换取更低的峰值内存和更大的空闲块复用机会，这个取舍与 `_Calculate_growth` 的实现一致。
 
 这个选择没有对错之分。libstdc++ 与 libc++ 保持倍增，换取更少的重分配；MSVC 选择 1.5，换取内存占用。标准不规定因子，同一段代码在三家实现上的容量序列与重分配时机都不同，依赖容量序列的代码不可移植。
 
@@ -365,7 +365,7 @@ private:
 
 这个简化实现只保留主路径：容量检查、末尾构造、重分配、析构与归还。拷贝构造、移动构造、移动赋值、`insert`/`erase`、分配器传播、常量求值与调试钩子都在后文展开，它们不改变上面的结构。
 
-为了突出重分配路径，简化实现把新元素的构造放在提交之后；真实实现把新元素构造纳入同一个守卫，并按第 5.4 节的顺序先构造新元素、再搬迁旧元素。
+为了突出重分配路径，简化实现把新元素的构造放在提交之后；真实实现把新元素构造纳入同一个守卫，并按第 5.4 节的顺序先构造新元素、再把旧元素构造到新存储。
 
 三个指针的表示让 `size()` 退化为一次相减，让「是否还有剩余容量」退化为 `end_ != cap_`；分配器通过 `allocator_traits` 访问，元素构造与析构不直接调用 `new`/`delete`。这两点是实现的主干。
 
@@ -387,9 +387,9 @@ MSVC 用 `_Buy_raw` 分配、`_Change_array` 接管存储（`stl/inc/vector:2027
 
 `push_back` 与 `emplace_back` 共享同一结构：容量足够时在当前末尾构造对象、把末尾指针加一；容量不足时走重分配路径。
 
-libstdc++ 的慢路径是 `_M_realloc_insert`（`bits/vector.tcc:459`–`557`），MSVC 是 `_Emplace_back_with_unused_capacity`（`stl/inc/vector:855`）配合 `_Reallocation_guard2`（`vector:628`），libc++ 用 `_SplitBuffer` 构造新缓冲区后搬迁（`__vector/vector.h:1020`–`1028`）。
+libstdc++ 的慢路径是 `_M_realloc_insert`（`bits/vector.tcc:459`–`557`），MSVC 是 `_Emplace_back_with_unused_capacity`（`stl/inc/vector:855`）配合 `_Reallocation_guard2`（`vector:628`），libc++ 用 `_SplitBuffer` 分配新缓冲区并构造旧元素（`__vector/vector.h:1020`–`1028`）。
 
-关闭加固与调试检查时，热路径的成本是一次构造加一次指针自增，除容量比较外没有额外开销。慢路径的成本是分配、搬迁全部元素、释放旧存储，比例由增长因子决定。
+关闭加固与调试检查时，热路径的成本是一次构造加一次指针自增，除容量比较外没有额外开销。慢路径的成本是分配、构造全部旧元素、释放旧存储，比例由增长因子决定。
 
 ### 5.4 重分配的顺序
 
@@ -397,14 +397,14 @@ libstdc++ 的慢路径是 `_M_realloc_insert`（`bits/vector.tcc:459`–`557`）
 
 1. 计算新容量并分配新存储。
 2. 在正确位置构造新元素。
-3. 搬迁旧元素到新存储。
+3. 把旧元素构造到新存储。
 4. 销毁旧元素、释放旧存储、更新三个指针。
 
-先构造新元素再搬迁旧元素，是为了处理 C++11 的别名情形：`v.push_back(v[0])` 的参数可能引用旧存储中的元素，先搬迁会让参数指向已被移走的对象。libstdc++ 在 `_M_realloc_insert` 内有一段注释说明这一点（`bits/vector.tcc:479`–`483`）。
+先构造新元素再把旧元素构造到新存储，是为了处理 C++11 的别名情形：`v.push_back(v[0])` 的参数可能引用旧存储中的元素，先处理旧元素会让参数指向已被移走的对象。libstdc++ 在 `_M_realloc_insert` 内有一段注释说明这一点（`bits/vector.tcc:479`–`483`）。
 
-### 5.5 搬迁：移动、拷贝与重定位
+### 5.5 元素构造方式：移动、拷贝与重定位
 
-搬迁用哪种操作由类型属性决定：
+旧元素用哪种方式构造到新存储，由类型属性决定：
 
 - 类型可平凡重定位（trivially relocatable）时按字节复制。libstdc++ 的 `_S_use_relocate` 与 `__relocate_a` 走 `__builtin_memcpy`（`bits/stl_uninitialized.h:1394`），不调用构造函数。
 - 否则，移动构造是 `noexcept` 时用移动。
@@ -417,7 +417,7 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 ### 5.6 中间插入
 
-容量足够时，中间 `insert` 把插入点之后的元素整体后移一位，在空出的位置构造新元素。容量不足时走重分配，搬迁时把插入点之后的元素直接构造到偏移后的位置，避免先整体移位再插入。
+容量足够时，中间 `insert` 把插入点之后的元素整体后移一位，在空出的位置构造新元素。容量不足时走重分配，把插入点之后的元素直接构造到偏移后的位置，避免先整体移位再插入。
 
 复杂度由此确定：不重分配时移动的元素数是「插入个数 + 插入点到末尾的距离」；重分配时所有元素都要搬一次。
 
@@ -447,7 +447,7 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 移动赋值的分支更多：`propagate_on_container_move_assignment` 为真、`is_always_equal` 为真或两个分配器相等时，直接窃取缓冲区（libstdc++ 的 `_M_move_assign(true_type)`，`bits/stl_vector.h:2255`–`2261`；MSVC 在 `operator=` 里按 traits 分支，`stl/inc/vector:801`–`828`）；否则只能逐元素移动，再把源清空（libstdc++ `bits/stl_vector.h:2267`–`2279`）。
 
-`swap` 交换三个指针，分配器按 `propagate_on_container_swap` 决定是否一起交换；`noexcept` 条件由 `propagate_on_container_swap` 与 `is_always_equal` 的析取给出。libstdc++ 的 `_M_swap_data`（`bits/stl_vector.h:128`）、MSVC 的 `_Swap_val`（`stl/inc/vector:419`）与 libc++ 布局的 `__swap`（`__vector/layout.h:397`）都只交换三个字段，不搬迁元素。
+`swap` 交换三个指针，分配器按 `propagate_on_container_swap` 决定是否一起交换；`noexcept` 条件由 `propagate_on_container_swap` 与 `is_always_equal` 的析取给出。libstdc++ 的 `_M_swap_data`（`bits/stl_vector.h:128`）、MSVC 的 `_Swap_val`（`stl/inc/vector:419`）与 libc++ 布局的 `__swap`（`__vector/layout.h:397`）都只交换三个字段，不构造也不析构元素。
 
 析构函数销毁全部元素，再按容量归还存储。这三组特殊成员解释了为什么 `vector` 的移动通常是常数时间，而跨分配器的移动赋值会退化为线性时间。
 
@@ -455,11 +455,11 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 重分配与插入都要在异常时回到可用的状态。实现的做法统一为「把已构造区间与新存储记在守卫对象里」，异常传播时守卫的析构函数销毁已构造元素并归还存储。
 
-libstdc++ 用两个守卫：`_Guard_alloc` 负责在新存储未被接管时归还它（`bits/vector.tcc:477`），`_Guard_elts` 负责销毁已构造的元素（`bits/vector.tcc:512`–`531`）。搬迁成功后把守卫的目标改指向旧存储，再在成功路径上释放。
+libstdc++ 用两个守卫：`_Guard_alloc` 负责在新存储未被接管时归还它（`bits/vector.tcc:477`），`_Guard_elts` 负责销毁已构造的元素（`bits/vector.tcc:512`–`531`）。旧元素构造成功后把守卫的目标改指向旧存储，再在成功路径上释放。
 
 MSVC 用 `_Reallocation_guard2`（`stl/inc/vector:628`–`644`），它保存分配器、新指针、新容量与已构造区间 `[_Constructed_first, _Constructed_last)`，析构时先 `_Destroy_range` 再 `deallocate`。
 
-libc++ 把暂存缓冲区本身做成 RAII 类型 `__split_buffer`：新元素与搬迁都在其中完成，析构时销毁已构造区间并归还内存；构造函数路径另外用 `__destroy_vector` 守卫处理元素构造失败。
+libc++ 把暂存缓冲区本身做成 RAII 类型 `__split_buffer`：新元素与旧元素的构造都在其中完成，析构时销毁已构造区间并归还内存；构造函数路径另外用 `__destroy_vector` 守卫处理元素构造失败。
 
 守卫的结构解释了第 6 章的结论：能回滚的前提是旧存储仍然完整。拷贝失败时旧元素未动，守卫只需清理新块；移动失败时旧元素可能已被改动，守卫无法恢复，异常保证因此降级。
 
@@ -478,7 +478,7 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 | 布局 | 三个指针 | 三个指针，调试时加代理指针 | 三个指针，可选尺寸布局 |
 | 增长 | `size + max(size, n)`，2 倍 | `cap + cap / 2`，1.5 倍 | `max(new, 2 * cap)`，2 倍 |
 | 分配大小 | 精确 n | `allocate_at_least` | `allocate_at_least` |
-| 重分配搬迁 | relocate 或 `move_if_noexcept` | `move_if_noexcept` 分支 | `__split_buffer` 加 relocation |
+| 重分配的元素构造 | relocate 或 `move_if_noexcept` | `move_if_noexcept` 分支 | `__split_buffer` 加 relocation |
 | 守卫对象 | `_Guard_alloc`、`_Guard_elts` | `_Reallocation_guard2` | `__split_buffer`、`__destroy_vector` |
 | `shrink_to_fit` | 条件收缩，不抛 | 精确收缩，可抛 | `noexcept`，容量可能仍大于 `size()` |
 | `vector<bool>` 字宽 | `unsigned long` | `unsigned int` | `size_type` |
@@ -491,13 +491,13 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 
 ### 6.1 强保证的两个前提
 
-重分配要搬迁全部旧元素。搬迁失败时能否回到原状，取决于两件事：旧存储是否仍然完整，已构造的新元素能否逐个析构。
+重分配要把全部旧元素构造到新存储。构造失败时能否回到原状，取决于两件事：旧存储是否仍然完整，已构造的新元素能否逐个析构。
 
 拷贝失败时源对象不变，旧存储完整，回滚只需析构新存储里已构造的元素。移动失败时源对象可能已被改动，旧存储不再完整，没有通用的回滚办法。标准因此把「可拷贝」与「移动不抛」作为强保证的充分条件（[draft][vector.modifiers]/2）。
 
 ### 6.2 三种类型的分档
 
-| 类型属性 | 搬迁方式 | 尾部插入的保证 |
+| 类型属性 | 构造方式 | 尾部插入的保证 |
 | --- | --- | --- |
 | 可拷贝 | 拷贝（移动可能抛时）或移动 | 强保证 |
 | 只可移动，移动 `noexcept` | 移动 | 强保证 |
@@ -543,7 +543,7 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 | --- | --- |
 | libstdc++ | `_M_shrink_to_fit` 先判 `capacity() == size()`，再调用 `__shrink_to_fit_aux`；元素可拷贝或移动 `noexcept` 时用 `move_if_noexcept` 构造新容器并 `swap`，否则返回、不收缩；全过程不抛（`bits/vector.tcc:919`、`bits/alloc_traits.h:1027`–`1055`） |
 | MSVC STL | 空容器调用 `_Tidy()` 释放存储；非空容器调用 `_Reallocate<_Exactly>(size())`，重分配到精确大小，分配失败抛 `bad_alloc`（`stl/inc/vector:1736`） |
-| libc++ | `shrink_to_fit` 声明为 `noexcept`；只有新缓冲容量更小时才搬迁，成功后容量仍可能大于 `size()`（`__vector/vector.h:1030`–`1047`） |
+| libc++ | `shrink_to_fit` 声明为 `noexcept`；只有新缓冲容量更小时才把元素构造到新缓冲，成功后容量仍可能大于 `size()`（`__vector/vector.h:1030`–`1047`） |
 
 libstdc++ 的 `__shrink_to_fit_aux` 只在元素可拷贝或移动 `noexcept` 时构造新容器并交换，条件不满足时直接返回，容量不变；成功路径是新分配加 `swap`，没有 `realloc`（`bits/alloc_traits.h:1034`–`1049`）。
 
