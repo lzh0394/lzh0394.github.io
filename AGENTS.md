@@ -50,6 +50,7 @@ categories 从以下列表选择
 
 - 新建草稿使用手写文件，不使用 `hugo new`
 - 草稿放 `content/draft/<slug>.md`，文件名不带日期，front matter 必须 `draft: true`
+- 草稿不排期：front matter 的 `date` 填创建日期，不写计划发布日期
 - 发布时才移到 `content/post/YYYY-MM-DD-slug.md`，将 front matter 改为 `draft: false`
 - 已发布文章路径：`content/post/YYYY-MM-DD-slug.md`；`slug` 与文件名中日期之后的部分一致。
 - 永久链接规则：`/post/:year/:month/:day/:slug/`（改 `slug` 等于换 URL，已发布文章不要改）
@@ -57,7 +58,7 @@ categories 从以下列表选择
 ## 发布步骤
 
 - 将草稿从 `content/draft` 移动到 `content/post`
-- date 对齐到文件名日期
+- date 改为实际发布日期（通常为当天），文件名日期与 `date` 一致
 - 将 front matter 改为 `draft: false`
 - 补齐 `categories`/`tags`
 - 构建验证
