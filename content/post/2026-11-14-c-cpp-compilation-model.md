@@ -107,7 +107,7 @@ C 与 C++ 共享同一套单独编译（separate compilation）模型：每个�
 
 编译器的输入是预处理后的记号序列。前端做语法分析、名字查找、重载决议、模板实例化与语义检查，生成中间表示；中端做与目标无关的优化，后端生成目标代码。
 
-翻译单元内的信息是完整的，因此内联、常量传播、死代码消除、去虚化（在动态类型已知时）与别名分析都在这一层做。别名分析决定编译器能重排多少内存访问，详见[别名分析概述](/post/2026/10/22/alias-analysis/)。
+翻译单元内的信息是完整的，因此内联优化、常量传播、死代码消除、去虚化（在动态类型已知时）与别名分析都在这一层做。别名分析决定编译器能重排多少内存访问，详见[别名分析概述](/post/2026/10/22/alias-analysis/)。
 
 跨翻译单元的部分只能靠 LTO（第 8 章）。在此之前，编译器对另一个翻译单元里的函数体、常量取值与类型布局一无所知。
 
@@ -129,7 +129,7 @@ Itanium C++ ABI 的修饰规则公开且稳定，GCC、Clang 与多数 Unix 平�
 
 ### 4.3 inline、模板与代码生成
 
-具有外部链接或模块链接的 inline 函数允许在多个翻译单元定义，链接器把它们视为同一实体，地址唯一（`[dcl.inline]/2` 注 1）。每个使用它的翻译单元通常各生成一份代码，用弱符号或 COMDAT 标记，链接器只保留一份。`inline` 只是内联替换的提示，实现可以不展开（`[dcl.inline]/3`）；没有展开的调用仍走普通调用。
+具有外部链接或模块链接的 inline 函数允许在多个翻译单元定义，链接器把它们视为同一实体，地址唯一（`[dcl.inline]/2` 注 1）。每个使用它的翻译单元通常各生成一份代码，用弱符号或 COMDAT 标记，链接器只保留一份。`inline` 只是提示实现优先做 inline 替换，实现可以不展开（`[dcl.inline]/3`）；没有展开的调用仍走普通调用。
 
 模板的隐式实例化发生在使用点（`[temp.inst]/2`），每个需要该特化的翻译单元通常都会生成代码。显式实例化定义（`template class X<int>;`）用于把生成集中到一个翻译单元，其他翻译单元用显式实例化声明（`extern template class X<int>;`）抑制重复生成（`[temp.explicit]/1`、`/2`）。
 
@@ -316,9 +316,9 @@ PIMPL 减少头文件依赖与布局耦合，但仍是 C++ ABI 接口，跨编�
 
 链接时优化（Link Time Optimization，LTO）把中间表示留在目标文件里，链接时由链接器插件调用编译器后端做跨翻译单元优化。GCC 用 `-flto` 保存 GIMPLE，Clang 用 `-flto` 或 `-flto=thin` 保存 LLVM IR，MSVC 用 `/GL` 编译、`/LTCG` 链接。
 
-LTO 能看到多个翻译单元的类型与函数体，因此可以做跨单元内联、过程间常量传播、去虚化与死代码消除，也能发现一部分 ODR 违规（GCC 与 Clang 的 `-Wodr` 都需要 LTO 信息）。LTO 不改变语义：多份定义仍须一致，LTO 只是让实现有机会比较它们。
+LTO 能看到多个翻译单元的类型与函数体，因此可以做跨单元的内联优化、过程间常量传播、去虚化与死代码消除，也能发现一部分 ODR 违规（GCC 与 Clang 的 `-Wodr` 都需要 LTO 信息）。LTO 不改变语义：多份定义仍须一致，LTO 只是让实现有机会比较它们。
 
-限制主要来自可见性边界：共享库导出的符号可以被外部替换，插件与 `dlsym` 可能在运行期找到函数，外部可见的符号因此不能被随意内联或删除。`-fvisibility=hidden` 把不需要导出的符号隐藏，能显著扩大 LTO 的优化范围。
+限制主要来自可见性边界：共享库导出的符号可以被外部替换，插件与 `dlsym` 可能在运行期找到函数，外部可见的符号因此不能被随意 inline 展开或删除。`-fvisibility=hidden` 把不需要导出的符号隐藏，能显著扩大 LTO 的优化范围。
 
 代价是链接时间、内存占用、调试信息质量与构建可复现性。`-flto-partition` 控制划分，`-ffat-lto-objects` 让目标文件同时包含机器码以便非 LTO 链接，`-fno-lto` 可以排除个别目标文件。
 
@@ -326,11 +326,11 @@ LTO 能看到多个翻译单元的类型与函数体，因此可以做跨单元�
 
 默认可见性由 ABI 决定：ELF 上全局符号默认导出，Windows 上默认不导出。`-fvisibility=hidden` 把默认改成隐藏，再用 `__attribute__((visibility("default")))` 显式导出；`-fvisibility-inlines-hidden` 单独处理 inline 函数。
 
-隐藏符号让编译器知道调用不会被插入，可以做直接调用、内联与去虚化；导出符号保留插入语义。`-fno-semantic-interposition` 是另一条路：保留导出，但放弃插入语义。Windows 用 `__declspec(dllexport)`、`.def` 文件或 `/EXPORT` 控制导出，导入方用 `__declspec(dllimport)` 或导入库。
+隐藏符号让编译器知道调用不会被插入，可以做直接调用、内联优化与去虚化；导出符号保留插入语义。`-fno-semantic-interposition` 是另一条路：保留导出，但放弃插入语义。Windows 用 `__declspec(dllexport)`、`.def` 文件或 `/EXPORT` 控制导出，导入方用 `__declspec(dllimport)` 或导入库。
 
 ### 8.3 PGO 与后链接优化
 
-基于剖析的优化（Profile-Guided Optimization，PGO）用实际运行的剖面指导内联、分支布局与寄存器分配：GCC 与 Clang 用 `-fprofile-generate` 与 `-fprofile-use`，MSVC 用 `/GENPROFILE` 与 `/USEPROFILE`。BOLT 在链接之后重排代码布局，进一步优化指令缓存与分支预测。PGO 与 BOLT 都不改变编译模型，只改变优化决策。
+基于 profile 的优化（Profile-Guided Optimization，PGO）用实际运行收集的 profile 指导内联优化、分支布局与寄存器分配：GCC 与 Clang 用 `-fprofile-generate` 与 `-fprofile-use`，MSVC 用 `/GENPROFILE` 与 `/USEPROFILE`。BOLT 在链接之后重排代码布局，进一步优化指令缓存与分支预测。PGO 与 BOLT 都不改变编译模型，只改变优化决策。
 
 段级垃圾回收与相同代码折叠（ICF）是链接期的另一类优化：`--gc-sections` 与 `/OPT:REF` 丢弃未使用节；`--icf=all` 与 `/OPT:ICF` 合并相同代码。ICF 可能让不同函数的地址相等，依赖函数地址唯一性的代码需要留意。
 
@@ -351,7 +351,7 @@ LTO 能看到多个翻译单元的类型与函数体，因此可以做跨单元�
 
 ### 9.2 统一构建
 
-统一构建（unity build）把多个源文件合成一个翻译单元：直接在一个 `.cpp` 里 `#include` 其他 `.cpp`，或用脚本拼接。翻译单元边界消失，跨文件内联与 ODR 检查都变成翻译单元内的事。
+统一构建（unity build）把多个源文件合成一个翻译单元：直接在一个 `.cpp` 里 `#include` 其他 `.cpp`，或用脚本拼接。翻译单元边界消失，跨文件内联优化与 ODR 检查都变成翻译单元内的事。
 
 代价是 `static` 符号与宏冲突、增量构建失效、单次编译内存上升、代码组织变差。小项目与发布构建可以使用，日常开发通常不合适。
 
@@ -397,7 +397,7 @@ C 允许暂定定义：文件作用域的 `int x;` 在翻译单元结束时若�
 
 C++ 没有暂定定义，`int x;` 就是定义，多份定义直接违反 ODR。
 
-C99 的 `inline` 语义与 C++ 不同：带 `inline` 的函数在 C 中提供内联定义，不提供外部定义，还需要某个翻译单元提供外部定义（C17 6.7.4）；C++ 中具有外部链接的 inline 函数允许多个翻译单元定义，由链接器合并（`[dcl.inline]/2`）。头文件里的 `static inline` 是 C 的常用写法，C++ 中则用 `inline` 或 `constexpr`。
+C99 的 `inline` 语义与 C++ 不同：带 `inline` 的函数在 C 中提供 inline 定义，不提供外部定义，还需要某个翻译单元提供外部定义（C17 6.7.4）；C++ 中具有外部链接的 inline 函数允许多个翻译单元定义，由链接器合并（`[dcl.inline]/2`）。头文件里的 `static inline` 是 C 的常用写法，C++ 中则用 `inline` 或 `constexpr`。
 
 ### 10.3 初始化与运行期设施
 
