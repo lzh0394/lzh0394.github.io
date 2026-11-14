@@ -15,7 +15,7 @@ summary: "以标准条款与三家实现源码为证据，拆解 std::vector 的
 
 容量与失效是同一条链上的两环：`capacity()` 是已分配存储能容纳的元素数，`size()` 是已构造元素数，两者之间是未构造的原始存储；`reserve` 只增加前者，`shrink_to_fit` 只是非约束请求。是否重分配由 `size()` 与 `capacity()` 的关系决定，与调用哪个函数无关：重分配使全部引用、指针、迭代器失效，不重分配时只有插入点及之后失效，`erase` 从擦除点开始失效。阅读或编写 `vector` 代码时，先回答这个问题，失效范围与成本随之确定。
 
-异常保证的分界由元素类型决定。元素可拷贝，或移动构造 `noexcept`，尾部插入在扩容失败后才能回滚到原状；只可移动且移动可能抛的类型落在标准少见的「效果未指定」情形，因为旧存储已被破坏，没有通用的恢复办法。让移动构造与移动赋值保持 `noexcept`，是同时改善扩容与 `erase` 行为成本最低的一步。
+异常保证的分界由元素类型决定。元素可复制，或移动构造 `noexcept`，尾部插入在扩容失败后才能回滚到原状；只可移动且移动可能抛的类型落在标准少见的「效果未指定」情形，因为旧存储已被破坏，没有通用的恢复办法。让移动构造与移动赋值保持 `noexcept`，是同时改善扩容与 `erase` 行为成本最低的一步。
 
 几何增长是摊销 O(1) 的必要条件：容量按因子 c 增长时，元素移动总次数约为 `c / (c - 1) * n`，因子 2 约 2n，因子 1.5 约 3n，固定增量则退化为 O(n²)。标准只规定复杂度，因子由实现选择：libstdc++ 与 libc++ 用 2 倍，MSVC 用 1.5 倍。因子小于 2 时，此前释放的块有机会被后续请求复用；等于 2 时释放块的总和永远小于下一次请求。1.5 的代价是更多次重分配与元素移动，2 倍的代价是更高的峰值内存。容量序列与 `shrink_to_fit` 的实际效果因此不可移植。
 
@@ -125,17 +125,17 @@ summary: "以标准条款与三家实现源码为证据，拆解 std::vector 的
 | 不抛 | 声明 `noexcept` 且实现不抛 | `size`、`capacity`、`empty`、`pop_back` |
 | 强保证 | 抛异常后容器保持原状 | 尾部 `push_back`（条件）、`resize(sz, c)`、`reserve`（条件） |
 | 基本保证 | 抛异常后容器有效，状态未知 | 中间 `insert` 在元素操作抛异常时 |
-| 未指定 | 标准不作要求 | 不可拷贝且移动可能抛的类型扩容失败 |
+| 未指定 | 标准不作要求 | 不可复制且移动可能抛的类型扩容失败 |
 
 容器要求给出了一条通用保证：[container.reqmts]/66 规定，除非另有说明，单元素 `insert`/`emplace` 抛异常时函数无效果，`push_back`/`emplace_back` 抛异常时函数无效果，`erase`/`clear`/`pop_back` 不抛异常。`[vector.modifiers]` 是这些例外的来源之一。
 
 `[vector.modifiers]/2` 的措辞分三句：
 
-- 由元素拷贝构造、移动构造、赋值、移动赋值之外的异常触发时，无效果。
+- 由元素复制构造、移动构造、赋值、移动赋值之外的异常触发时，无效果。
 - 尾部插入单元素时，若 `T` 是 `Cpp17CopyInsertable` 或 `is_nothrow_move_constructible_v<T>` 为真，无效果。
-- 否则，若移动构造抛出且 `T` 不可拷贝，效果未指定。
+- 否则，若移动构造抛出且 `T` 不可复制，效果未指定。
 
-最后一句是 `vector` 主要的未指定情形。它对应的类型是「只可移动、移动可能抛」：拷贝被删除，`move_if_noexcept` 没有退路，实现只能移动；移动失败时新存储里已构造了一部分元素，旧存储的状态已不可恢复，标准因此不给保证。规避方式是让移动构造 `noexcept`，或者用 `reserve` 把扩容挪到不容易失败的位置。
+最后一句是 `vector` 主要的未指定情形。它对应的类型是「只可移动、移动可能抛」：复制被删除，`move_if_noexcept` 没有退路，实现只能移动；移动失败时新存储里已构造了一部分元素，旧存储的状态已不可恢复，标准因此不给保证。规避方式是让移动构造 `noexcept`，或者用 `reserve` 把扩容挪到不容易失败的位置。
 
 `reserve` 与 `shrink_to_fit` 的保证带同一个限定：由非 `Cpp17CopyInsertable` 类型的移动构造抛出的异常，不保证无效果（[draft][vector.capacity]/4、/9）。原因是重分配必须把旧元素移动到新存储，这一步失败时没有通用的安全回滚办法。
 
@@ -363,7 +363,7 @@ private:
 };
 ```
 
-这个简化实现只保留主路径：容量检查、末尾构造、重分配、析构与归还。拷贝构造、移动构造、移动赋值、`insert`/`erase`、分配器传播、常量求值与调试钩子都在后文展开，它们不改变上面的结构。
+这个简化实现只保留主路径：容量检查、末尾构造、重分配、析构与归还。复制构造、移动构造、移动赋值、`insert`/`erase`、分配器传播、常量求值与调试钩子都在后文展开，它们不改变上面的结构。
 
 为了突出重分配路径，简化实现把新元素的构造放在提交之后；真实实现把新元素构造纳入同一个守卫，并按第 5.4 节的顺序先构造新元素、再把旧元素移动到新存储。
 
@@ -402,13 +402,13 @@ libstdc++ 的慢路径是 `_M_realloc_insert`（`bits/vector.tcc:459`–`557`）
 
 先构造新元素再把旧元素移动到新存储，是为了处理 C++11 的别名情形：`v.push_back(v[0])` 的参数可能引用旧存储中的元素，先处理旧元素会让参数指向已被移走的对象。libstdc++ 在 `_M_realloc_insert` 内有一段注释说明这一点（`bits/vector.tcc:479`–`483`）。
 
-### 5.5 移动旧元素：移动构造、拷贝构造与重定位
+### 5.5 移动旧元素：移动构造、复制构造与重定位
 
 这里的「移动旧元素」指重分配时把旧元素放入新存储的整体动作；它与移动构造、移动赋值不在同一个层次，具体用哪种操作由类型属性决定：
 
 - 类型可平凡重定位（trivially relocatable）时按字节复制。libstdc++ 的 `_S_use_relocate` 与 `__relocate_a` 走 `__builtin_memcpy`（`bits/stl_uninitialized.h:1394`），不调用构造函数。
 - 否则，移动构造是 `noexcept` 时用移动构造。
-- 否则，有拷贝构造时用拷贝构造，因为拷贝失败时旧存储仍然有效，能提供强保证。
+- 否则，有复制构造时用复制构造，因为复制失败时旧存储仍然有效，能提供强保证。
 - 否则，只可移动且移动可能抛，只能用移动构造，失败时没有回滚保证。
 
 实现按这条规则分支：libstdc++ 用 `__uninitialized_move_if_noexcept_a`（`bits/vector.tcc:533`–`543`），MSVC 用 `is_nothrow_move_constructible_v<_Ty> || !is_copy_constructible_v<_Ty>` 决定是否移动（`stl/inc/vector:906`–`917`），libc++ 用 relocation 与 `__move_if_noexcept` 系列工具。
@@ -421,11 +421,11 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 复杂度由此确定：不重分配时移动的元素数是「插入个数 + 插入点到末尾的距离」；重分配时所有元素都要移动一次。
 
-`insert` 的异常保证弱于尾部插入：由元素的拷贝构造、移动构造、赋值、移动赋值抛出的异常，标准允许留下效果（[draft][vector.modifiers]/2）。原因是后移与构造分步进行，中途失败时元素已经移动了一部分。
+`insert` 的异常保证弱于尾部插入：由元素的复制构造、移动构造、赋值、移动赋值抛出的异常，标准允许留下效果（[draft][vector.modifiers]/2）。原因是后移与构造分步进行，中途失败时元素已经移动了一部分。
 
 ### 5.7 erase 与 clear
 
-`erase(pos)` 把 `pos` 之后的元素逐个赋值到前一位，再析构最后一个元素；实现通常把连续赋值优化成块拷贝。复杂度按赋值次数计，等于擦除点之后的元素数（[draft][vector.modifiers]/6）；析构次数等于被删元素数。
+`erase(pos)` 把 `pos` 之后的元素逐个赋值到前一位，再析构最后一个元素；实现通常把连续赋值优化成块复制。复杂度按赋值次数计，等于擦除点之后的元素数（[draft][vector.modifiers]/6）；析构次数等于被删元素数。
 
 `clear()` 只析构元素，不释放存储，容量不变。`pop_back()` 析构最后一个元素并回退末尾指针，声明为 `noexcept`。
 
@@ -439,11 +439,11 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 ### 5.9 特殊成员函数与 swap
 
-拷贝构造分配与源等大的存储，再逐个拷贝构造元素；中途抛异常时，已构造的元素由守卫析构（libstdc++ `vector(const vector&)` 用 `__uninitialized_copy_a`，`bits/stl_vector.h:621`–`629`；libc++ 用 `__make_exception_guard(__destroy_vector(*this))`，`__vector/vector.h:684`）。
+复制构造分配与源等大的存储，再逐个复制构造元素；中途抛异常时，已构造的元素由守卫析构（libstdc++ `vector(const vector&)` 用 `__uninitialized_copy_a`，`bits/stl_vector.h:621`–`629`；libc++ 用 `__make_exception_guard(__destroy_vector(*this))`，`__vector/vector.h:684`）。
 
 移动构造是 O(1)：窃取三个指针，并把源置空。libstdc++ 在 `_Vector_impl_data` 的移动构造里复制指针并清零源（`bits/stl_vector.h:111`–`115`），MSVC 用 `_Take_contents`（`stl/inc/vector:426`），libc++ 用布局的移动赋值工具。
 
-拷贝赋值在容量足够时复用存储、逐元素赋值；容量不足时分配新块、拷贝、交换后释放旧块。分配器是否随赋值传播由 `propagate_on_container_copy_assignment` 决定。
+复制赋值在容量足够时复用存储、逐元素赋值；容量不足时分配新块、复制、交换后释放旧块。分配器是否随赋值传播由 `propagate_on_container_copy_assignment` 决定。
 
 移动赋值的分支更多：`propagate_on_container_move_assignment` 为真、`is_always_equal` 为真或两个分配器相等时，直接窃取缓冲区（libstdc++ 的 `_M_move_assign(true_type)`，`bits/stl_vector.h:2255`–`2261`；MSVC 在 `operator=` 里按 traits 分支，`stl/inc/vector:801`–`828`）；否则只能逐元素移动，再把源清空（libstdc++ `bits/stl_vector.h:2267`–`2279`）。
 
@@ -461,7 +461,7 @@ MSVC 用 `_Reallocation_guard2`（`stl/inc/vector:628`–`644`），它保存分
 
 libc++ 把暂存缓冲区本身做成 RAII 类型 `__split_buffer`：新元素与旧元素的移动都在其中完成，析构时销毁已构造区间并归还内存；构造函数路径另外用 `__destroy_vector` 守卫处理元素构造失败。
 
-守卫的结构解释了第 6 章的结论：能回滚的前提是旧存储仍然完整。拷贝失败时旧元素未动，守卫只需清理新块；移动失败时旧元素可能已被改动，守卫无法恢复，异常保证因此降级。
+守卫的结构解释了第 6 章的结论：能回滚的前提是旧存储仍然完整。复制失败时旧元素未动，守卫只需清理新块；移动失败时旧元素可能已被改动，守卫无法恢复，异常保证因此降级。
 
 ### 5.11 constexpr 与编译器协作
 
@@ -493,13 +493,13 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 
 重分配要把全部旧元素移动到新存储。这一步失败时能否回到原状，取决于两件事：旧存储是否仍然完整，已构造的新元素能否逐个析构。
 
-拷贝失败时源对象不变，旧存储完整，回滚只需析构新存储里已构造的元素。移动失败时源对象可能已被改动，旧存储不再完整，没有通用的回滚办法。标准因此把「可拷贝」与「移动不抛」作为强保证的充分条件（[draft][vector.modifiers]/2）。
+复制失败时源对象不变，旧存储完整，回滚只需析构新存储里已构造的元素。移动失败时源对象可能已被改动，旧存储不再完整，没有通用的回滚办法。标准因此把「可复制」与「移动不抛」作为强保证的充分条件（[draft][vector.modifiers]/2）。
 
 ### 6.2 三种类型的分档
 
 | 类型属性 | 处理方式 | 尾部插入的保证 |
 | --- | --- | --- |
-| 可拷贝 | 拷贝（移动可能抛时）或移动 | 强保证 |
+| 可复制 | 复制（移动可能抛时）或移动 | 强保证 |
 | 只可移动，移动 `noexcept` | 移动 | 强保证 |
 | 只可移动，移动可能抛 | 移动 | 效果未指定 |
 
@@ -507,15 +507,15 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 
 ### 6.3 move_if_noexcept 的选择规则
 
-`std::move_if_noexcept` 的规则是：`!is_nothrow_move_constructible_v<T> && is_copy_constructible_v<T>` 为真时返回 `const T&`，否则返回 `T&&`。等价表述是「能移动且移动不抛时移动，否则能拷贝时拷贝，都不能时移动」。
+`std::move_if_noexcept` 的规则是：`!is_nothrow_move_constructible_v<T> && is_copy_constructible_v<T>` 为真时返回 `const T&`，否则返回 `T&&`。等价表述是「能移动且移动不抛时移动，否则能复制时复制，都不能时移动」。
 
 三家实现都按这条规则分支：
 
 - libstdc++ 用 `__uninitialized_move_if_noexcept_a`（`bits/vector.tcc` 的重分配路径）。
-- MSVC 在重分配路径里写 `if constexpr (is_nothrow_move_constructible_v<_Ty> || !is_copy_constructible_v<_Ty>)`，条件不满足时走拷贝。
+- MSVC 在重分配路径里写 `if constexpr (is_nothrow_move_constructible_v<_Ty> || !is_copy_constructible_v<_Ty>)`，条件不满足时走复制。
 - libc++ 用 `__uninitialized_allocator_relocate` 与 `__move_if_noexcept` 系列工具。
 
-这条规则的结果是：`noexcept` 移动的类型在扩容时走移动，移动可能抛但有拷贝的类型走拷贝，两种情况下旧元素都只被移动一次。
+这条规则的结果是：`noexcept` 移动的类型在扩容时走移动，移动可能抛但有复制的类型走复制，两种情况下旧元素都只被移动一次。
 
 ### 6.4 移动赋值的 noexcept 影响 erase
 
@@ -527,7 +527,7 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 
 - 移动构造与移动赋值标 `noexcept`，除非类型确实需要抛。这个选择不只影响 `vector`，还影响所有依赖 `move_if_noexcept` 的容器与算法。
 - 只可移动且移动可能抛的类型，在插入前 `reserve`，把重分配挪到可预期的位置；或改用 `std::deque`、`std::list`、`vector<std::unique_ptr<T>>`。
-- 不要假设移动一定比拷贝便宜：小对象移动与拷贝的成本可能相同。
+- 不要假设移动一定比复制便宜：小对象移动与复制的成本可能相同。
 
 ---
 
@@ -541,21 +541,21 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 
 | 实现 | 行为 |
 | --- | --- |
-| libstdc++ | `_M_shrink_to_fit` 先判 `capacity() == size()`，再调用 `__shrink_to_fit_aux`；元素可拷贝或移动 `noexcept` 时用 `move_if_noexcept` 构造新容器并 `swap`，否则返回、不收缩；全过程不抛（`bits/vector.tcc:919`、`bits/alloc_traits.h:1027`–`1055`） |
+| libstdc++ | `_M_shrink_to_fit` 先判 `capacity() == size()`，再调用 `__shrink_to_fit_aux`；元素可复制或移动 `noexcept` 时用 `move_if_noexcept` 构造新容器并 `swap`，否则返回、不收缩；全过程不抛（`bits/vector.tcc:919`、`bits/alloc_traits.h:1027`–`1055`） |
 | MSVC STL | 空容器调用 `_Tidy()` 释放存储；非空容器调用 `_Reallocate<_Exactly>(size())`，重分配到精确大小，分配失败抛 `bad_alloc`（`stl/inc/vector:1736`） |
 | libc++ | `shrink_to_fit` 声明为 `noexcept`；只有新缓冲容量更小时才移动元素到新缓冲，成功后容量仍可能大于 `size()`（`__vector/vector.h:1030`–`1047`） |
 
-libstdc++ 的 `__shrink_to_fit_aux` 只在元素可拷贝或移动 `noexcept` 时构造新容器并交换，条件不满足时直接返回，容量不变；成功路径是新分配加 `swap`，没有 `realloc`（`bits/alloc_traits.h:1034`–`1049`）。
+libstdc++ 的 `__shrink_to_fit_aux` 只在元素可复制或移动 `noexcept` 时构造新容器并交换，条件不满足时直接返回，容量不变；成功路径是新分配加 `swap`，没有 `realloc`（`bits/alloc_traits.h:1034`–`1049`）。
 
 ### 7.2 释放内存的三种写法
 
 `shrink_to_fit` 可能无效，需要确定释放时有三种写法：
 
-- 拷贝交换：`std::vector<T>(v).swap(v)`。拷贝一份精确大小的容器，交换后临时对象析构释放旧存储，要求 `T` 可拷贝。
+- 复制并交换：`std::vector<T>(v).swap(v)`。复制一份精确大小的容器，交换后临时对象析构释放旧存储，要求 `T` 可复制。
 - 移动重置：`auto old = std::move(v); v = std::vector<T>();`。`old` 在作用域结束时释放旧存储，要求分配器可比较相等，否则移动赋值可能退化为逐元素移动。
 - 新建容器：直接让 `v` 指向新对象，并显式处理分配器与生命周期。
 
-三条路径的代价都是 O(n) 的元素构造与一次分配，选择取决于类型是否可拷贝与分配器是否有状态。
+三条路径的代价都是 O(n) 的元素构造与一次分配，选择取决于类型是否可复制与分配器是否有状态。
 
 ### 7.3 容量的精确性
 
@@ -704,7 +704,7 @@ MSVC 与 libstdc++ 的调试档会改变对象布局，libc++ 的加固档以断
 
 1. 规模可预估时按量级 `reserve`，把重分配从热路径挪走；无法预估时接受几何增长的摊销成本。
 2. 任何可能改变容量的操作之后，重新获取指针、引用与迭代器，或改用下标访问。
-3. 让移动构造与移动赋值 `noexcept`，否则扩容与 `erase` 会退化为拷贝，或失去强保证。
+3. 让移动构造与移动赋值 `noexcept`，否则扩容与 `erase` 会退化为复制，或失去强保证。
 
 理解 `vector` 的关键在容量与失效的耦合：容量决定是否重分配，重分配决定失效范围，失效范围决定代码能不能持有元素地址。把这层关系记住，多数失效问题可以在写代码时避免。
 

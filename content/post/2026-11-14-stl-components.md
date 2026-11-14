@@ -146,7 +146,7 @@ L7–L12（文本、I/O、数值、并发、诊断与 C 兼容）：
 | 初始化列表 | `<initializer_list>` | `initializer_list`、`begin`/`end`/`size`/`data` | 布局由编译器约定（私有构造函数），不能自行定义；底层数组由编译器在调用点生成；元素生命周期到完整表达式结束 | 最小可用 |
 | 协程 | `<coroutine>` | `coroutine_traits`、`coroutine_handle`、`suspend_always`/`suspend_never`、`noop_coroutine` | `__builtin_coro_*` 内建；协程帧分配走 `operator new`；`promise_type` 协议与分配省略；ABI 版本必须与编译器一致（MSVC 用 `#pragma detect_mismatch("_COROUTINE_ABI", "2")`） | 可延后 |
 | 契约 | `<contracts>` | 契约断言与违约处理 | C++26 特性，依赖编译器契约支持；与 hardening 断言的关系要先定 | 可延后（前沿） |
-| 异常类 | `<stdexcept>` | `logic_error`、`runtime_error` 及派生类 | `what()` 返回以空字符结尾的字符串、拷贝不抛异常 [标准]；异常类必须导出以跨 DSO 抛出；`what()` 的存储方式属实现自由，libstdc++ 的 `<stdexcept>` 甚至直接包含 `<string>`（依赖倒置） | 最小可用 |
+| 异常类 | `<stdexcept>` | `logic_error`、`runtime_error` 及派生类 | `what()` 返回以空字符结尾的字符串、复制不抛异常 [标准]；异常类必须导出以跨 DSO 抛出；`what()` 的存储方式属实现自由，libstdc++ 的 `<stdexcept>` 甚至直接包含 `<string>`（依赖倒置） | 最小可用 |
 | C 基础类型头 | `<cstddef>`、`<cstdint>`、`<climits>`、`<cfloat>`、`<cstdarg>`、`<csetjmp>`、`<csignal>` | `size_t`、`byte`、定宽整数、浮点极限、`va_list`、`jmp_buf` | 类型必须与编译器一致，不能自造；`max_align_t` 随平台；`long double` 的 80/128 位差异会传导到 `<limits>`；`va_list` 布局不可移植；`longjmp` 跳过析构是标准可观察行为 | 最小可用 |
 
 这一层的另一半在头文件之外 [实现]：
@@ -231,7 +231,7 @@ L7–L12（文本、I/O、数值、并发、诊断与 C 兼容）：
 这一层有四个横切约束，决定验收方式 [标准]：
 
 - `constexpr` 矩阵：同一类型在不同标准级别能力不同（如 `optional` 在 C++17/20/23 的差异），要按标准级别分别测，不能只测最新标准。
-- 平凡性传播：`optional`、`variant`、`expected` 必须按元素或备选类型传播平凡拷贝与析构，否则容器与算法会放弃 `memmove` 一类优化，性能和 ABI 都受影响。
+- 平凡性传播：`optional`、`variant`、`expected` 必须按元素或备选类型传播平凡复制与析构，否则容器与算法会放弃 `memmove` 一类优化，性能和 ABI 都受影响。
 - 布局 ABI：`pair`、`tuple`、`optional`、`variant` 的 `sizeof` 决定容器布局与结构化绑定性能，发布后不能随意改。
 - 编译期成本：`tuple`/`variant`/`visit` 的模板实例化可能爆炸；自研实现应按「一个组件一个内部头」切分，避免每个工具头都拉入整棵 traits 依赖树 [推断]。
 
@@ -341,7 +341,7 @@ node handle 与分配器传播的交叉是本层最容易写错的部分 [标准
 | --- | --- | --- | --- |
 | 迭代器协议 | `<iterator>` | `iterator_traits`（用户特化优先于自动推导，保留指针与 `void` 特化）、`iterator_concept`、C++20 迭代器概念（`input_iterator`…`random_access_iterator`、`contiguous_iterator`）、`indirectly_readable`/`indirectly_writable`/`permutable`/`mergeable`/`sortable`；`iter_swap`/`iter_move` | 最小可用 |
 | 迭代器适配器 | `<iterator>` | `reverse_iterator`（底层须双向，`operator->` 经 `pointer_traits`）、`move_iterator`/`move_sentinel`（`operator*` 返回右值引用）、插入迭代器族（`*it = v` 与 `it = v` 都要生效）、`istream_iterator`/`ostream_iterator`（单遍、依赖 I/O 层）、`counted_iterator`（配 `default_sentinel_t`）、`common_iterator`（用 `variant` 存迭代器或哨兵） | 完整 |
-| 非修改算法 | `<algorithm>` | `all_of`/`find`/`count`/`mismatch`/`equal`/`search` 等；谓词按值拷贝；`for_each` 返回函数对象（C++11 起）；投影 | 最小可用 |
+| 非修改算法 | `<algorithm>` | `all_of`/`find`/`count`/`mismatch`/`equal`/`search` 等；谓词按值复制；`for_each` 返回函数对象（C++11 起）；投影 | 最小可用 |
 | 修改算法 | `<algorithm>` | `copy`/`move`/`fill`/`transform`/`remove`/`unique`/`replace`/`rotate`/`shuffle`；重叠范围要区分 `copy` 与 `copy_backward`；`remove` 的返回值语义；`shuffle` 依赖均匀随机数 | 最小可用 |
 | 排序与选择 | `<algorithm>` | 内省排序与插入排序阈值是实现自由；`stable_sort` 需要临时缓冲，缓冲不足时退化为原地归并；`partial_sort`；`nth_element` 平均线性；比较器必须严格弱序 | 最小可用（`sort` 是分水岭） |
 | 二分与堆 | `<algorithm>` | `lower_bound`/`upper_bound`/`equal_range` 只要求前向迭代器，比较器须与容器排序一致；`make_heap`/`push_heap`/`pop_heap`（`priority_queue` 的前置，必须先完成） | 最小可用（堆可前移） |

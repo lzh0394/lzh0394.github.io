@@ -26,7 +26,7 @@ summary: "从 C++98 的容器类型参数，到 C++11 的 allocator_traits、C++
 4. `allocator_traits` 是 C++11 的关键转折：分配器的所有成员都变为可选，缺失时由 traits 给出默认值；容器只通过 traits 访问分配器。N2982 给出的最小接口是 `value_type`、构造函数、模板转换构造、`allocate`、`deallocate`；分配器要求中的相等比较仍由 [allocator.requirements] 的表格规定。N2982 称 `allocator_traits` 为与 `iterator_traits` 同构的「适配点」。[提案 N2982][标准 allocator.traits]
 5. C++11 同时建立传播协议：`propagate_on_container_copy_assignment`、`propagate_on_container_move_assignment`、`propagate_on_container_swap` 默认全为 `false`，`select_on_container_copy_construction` 默认返回原分配器；`is_always_equal` 在 C++17 由 N4258 补入，默认取 `is_empty`。这组协议把「有状态」从不可说变成可声明。[标准 allocator.traits][提案 N4258]
 6. `scoped_allocator_adaptor`（N2554）解决嵌套容器的多级分配器传播，但要求类型层级显式编码每一层分配器。C++17 的 pmr 用运行期多态覆盖同一需求，且默认让元素沿用外层资源，scoped 适配器此后成为边缘设施。[提案 N2554、N3916]
-7. pmr 是第二次范式转换。`memory_resource` 提供虚接口，`polymorphic_allocator` 只持有资源指针，于是同一静态类型可在运行期表现为不同分配策略；代价是它的传播 traits 全为 `false`、拷贝构造回落到默认资源、资源生命周期完全由使用者负责，拷贝赋值被删除（P0337R0）。[提案 N3916、P0337R0][标准 memory.resource]
+7. pmr 是第二次范式转换。`memory_resource` 提供虚接口，`polymorphic_allocator` 只持有资源指针，于是同一静态类型可在运行期表现为不同分配策略；代价是它的传播 traits 全为 `false`、复制构造回落到默认资源、资源生命周期完全由使用者负责，复制赋值被删除（P0337R0）。[提案 N3916、P0337R0][标准 memory.resource]
 8. C++20 做减法与下沉。P0619R4 删除 `allocator<void>` 与 `pointer`、`rebind`、`construct`、`destroy`、`address`、`max_size` 等历史成员，但接受 P0619R4 自身的建议保留 `size_type` 与 `difference_type`；同一轮提案把分配与对象生存期操作变成 `constexpr`（P0784R7），使 `constexpr vector` 与 `constexpr string` 成为可能。[提案 P0619R4、P0784R7]
 9. C++23 的 `allocate_at_least` 把「分配器可能给出比请求更大的块」写进协议：`allocation_result` 同时返回指针与实际容量，容器可据此把 capacity 对齐到真实分配大小，减少重分配（P0401R6）。同一版本禁止用户特化 `allocator_traits`（P2652R2），协议从「可扩展」转为「封闭」。[提案 P0401R6、P2652R2]
 10. C++26 进入收尾与延伸：移除被 LWG 3170 弃用的 `allocator::is_always_equal`（P2868R3），撤回 `polymorphic_allocator::destroy` 的弃用（P2875R4），并把分配器语义带入 operation state、`promise`/`packaged_task` 与任务模型（P3433R1、P3503R3、P3980R1；后三项的采纳状态与归属见 7.4 与第 11 节）。[提案 P2868R3、P2875R4、P3433R1、P3503R3、P3980R1]
@@ -131,11 +131,11 @@ C++98 的 Allocator 要求包含下列成员（括号内为容器使用它的场
 - 想「运行时再决定用哪个分配器」在类型系统层面不可能，除非引入类型擦除或继承；
 - 容器的 ABI 与模板实例化数量随分配器类型增长。
 
-问题二：有状态分配器没有传播规则。C++98 允许分配器带状态，却没有规定容器拷贝、移动、交换时分配器怎么处理。LWG 431 与 N1599 指出：按当时的 `swap` 定义，同类型容器总能在常数时间内交换且不抛异常；但如果两侧是有状态分配器且不相等，`swap` 到底该交换分配器、线性搬移元素，还是直接未定义，标准没有答案。N2525 的措辞很直接：当时的「weasel wording」允许实现假设同类型分配器全部相等，而这必须被移除，有状态分配器才可能可移植地工作。[提案 N2525][缺陷 LWG 431]
+问题二：有状态分配器没有传播规则。C++98 允许分配器带状态，却没有规定容器复制、移动、交换时分配器怎么处理。LWG 431 与 N1599 指出：按当时的 `swap` 定义，同类型容器总能在常数时间内交换且不抛异常；但如果两侧是有状态分配器且不相等，`swap` 到底该交换分配器、线性搬移元素，还是直接未定义，标准没有答案。N2525 的措辞很直接：当时的「weasel wording」允许实现假设同类型分配器全部相等，而这必须被移除，有状态分配器才可能可移植地工作。[提案 N2525][缺陷 LWG 431]
 
 问题三：成员要求对分配器作者过于沉重。每个分配器都要实现 `rebind`、`construct`、`destroy`、`address`、`max_size`，哪怕行为与默认实现完全一致。更糟的是，这些成员一旦写错，错误会以容器内部模板实例化的形式出现，诊断信息极长。
 
-问题四：分配与构造耦合。`construct`/`destroy` 放在分配器上，容器就只能通过分配器构造元素，无法表达「这一层只负责内存，构造策略另说」。标准库因此也无法可靠地检测「这个分配器的 `construct` 就是 placement new，因此可以对平凡类型整块拷贝」——这正是 N2982 后来强调 `construct` 可选、可检测的价值所在。[提案 N2982]
+问题四：分配与构造耦合。`construct`/`destroy` 放在分配器上，容器就只能通过分配器构造元素，无法表达「这一层只负责内存，构造策略另说」。标准库因此也无法可靠地检测「这个分配器的 `construct` 就是 placement new，因此可以对平凡类型整块复制」——这正是 N2982 后来强调 `construct` 可选、可检测的价值所在。[提案 N2982]
 
 问题五：fancy pointer 与 `allocator<void>` 的边角。C++98 的措辞允许实现假设分配器的 `pointer` 就是 `value_type*`，共享内存与可重定位内存等场景因此不可移植；同时，`allocator<void>` 特化提供 `void*`/`const void*` 指针类型，并承担「proto-allocator」角色（C++11 中 `allocate` 的 hint 参数就使用 `allocator<void>::const_pointer`）。两者都是类型系统不完整的补丁。[提案 N2982][标准 default.allocator]
 
@@ -152,7 +152,7 @@ C++98 的 Allocator 要求包含下列成员（括号内为容器使用它的场
 
 ### 3.5 小结
 
-第一代模型能工作，但不可组合：它能表达「这个容器用哪种内存」，不能表达「这两个容器实例共享同一种内存，但类型相同」，也不能表达「拷贝这个容器时分配器怎么办」。这两条正是第二代的起点。
+第一代模型能工作，但不可组合：它能表达「这个容器用哪种内存」，不能表达「这两个容器实例共享同一种内存，但类型相同」，也不能表达「复制这个容器时分配器怎么办」。这两条正是第二代的起点。
 
 ---
 
@@ -230,14 +230,14 @@ C++11 用三个 traits 回答「容器做这四种操作时，分配器跟不跟
 
 | 容器操作 | 分配器是否传播 | 若传播 | 若不传播 |
 | --- | --- | --- | --- |
-| 拷贝赋值 | `propagate_on_container_copy_assignment` | 先按目标分配器释放旧存储，再拷贝赋值分配器，再分配 | 目标保留自己的分配器；必要时释放并重分配 |
+| 复制赋值 | `propagate_on_container_copy_assignment` | 先按目标分配器释放旧存储，再复制赋值分配器，再分配 | 目标保留自己的分配器；必要时释放并重分配 |
 | 移动赋值 | `propagate_on_container_move_assignment` | 直接接管源存储与分配器 | 分配器相等则接管；不相等则逐元素移动 |
 | `swap` | `propagate_on_container_swap` | 交换分配器 | 分配器相等则交换存储；不相等则行为未定义 |
-| 拷贝构造 | 不适用 | — | 通过 `select_on_container_copy_construction` 决定新分配器（默认返回源分配器） |
+| 复制构造 | 不适用 | — | 通过 `select_on_container_copy_construction` 决定新分配器（默认返回源分配器） |
 
 另有 `is_always_equal` 作为优化提示：若为 `true`，容器可以跳过「分配器是否相等」的运行时比较，直接接管存储。它的动因是 LWG 2108《No way to identify allocator types that always compare equal》（2011），N4258 以这个 trait 回应。它对移动赋值尤其重要：「不相等且不传播」是唯一必须逐元素移动的路径，N4258 因此把容器移动赋值的 `noexcept` 条件写成「`propagate_on_container_move_assignment` 为真，或 `is_always_equal` 为真」。[标准 allocator.traits][提案 N4258]
 
-这组协议解决了两件事：第一，有状态分配器第一次有了可移植的拷贝、移动、交换语义；第二，分配器作者通过几个 `using` 声明就能选择行为，不必重写容器。它也带来了新的复杂度：四种操作 × 三个 traits × 相等性判断，任何一项写错都可能导致「用 A 分配、用 B 释放」的未定义行为，因此成为容器实现最容易出错的区域之一。[推断]
+这组协议解决了两件事：第一，有状态分配器第一次有了可移植的复制、移动、交换语义；第二，分配器作者通过几个 `using` 声明就能选择行为，不必重写容器。它也带来了新的复杂度：四种操作 × 三个 traits × 相等性判断，任何一项写错都可能导致「用 A 分配、用 B 释放」的未定义行为，因此成为容器实现最容易出错的区域之一。[推断]
 
 ### 4.5 分配器感知构造
 
@@ -297,11 +297,11 @@ pmr 的传播设置与 C++11 的默认值一致，但理由不同：
 
 - 三个 `propagate_on_container_*` 全为 `false_type`；
 - `select_on_container_copy_construction()` 返回默认构造的 `polymorphic_allocator`，即使用默认资源，而不是源容器的资源；
-- 拷贝赋值被删除（P0337R0），因此 `polymorphic_allocator` 不可赋值。
+- 复制赋值被删除（P0337R0），因此 `polymorphic_allocator` 不可赋值。
 
-后果是明确的：使用 pmr 的容器在拷贝构造时默认改回默认资源；拷贝赋值时分配器不传播；移动赋值可能抛异常（因为不能接管存储时只能逐元素移动）；两个资源不相等的容器 `swap` 是未定义行为（来自容器的 AllocatorAwareContainer 前置条件）。[标准 container.requirements.general][提案 P0337R0]
+后果是明确的：使用 pmr 的容器在复制构造时默认改回默认资源；复制赋值时分配器不传播；移动赋值可能抛异常（因为不能接管存储时只能逐元素移动）；两个资源不相等的容器 `swap` 是未定义行为（来自容器的 AllocatorAwareContainer 前置条件）。[标准 container.requirements.general][提案 P0337R0]
 
-这些限制不是疏忽，而是生命周期推理的结果。资源是运行期对象，标准库无法知道它比容器活得久还是短；如果拷贝容器时把资源指针一并复制，源资源销毁后副本就会悬空。让拷贝回落到默认资源，至少保证「副本不会因为源资源消失而失效」，代价是调用者必须显式把资源传进新容器。这是一次用可预测性换安全性的取舍。[推断]
+这些限制不是疏忽，而是生命周期推理的结果。资源是运行期对象，标准库无法知道它比容器活得久还是短；如果复制容器时把资源指针一并复制，源资源销毁后副本就会悬空。让复制回落到默认资源，至少保证「副本不会因为源资源消失而失效」，代价是调用者必须显式把资源传进新容器。这是一次用可预测性换安全性的取舍。[推断]
 
 ### 5.4 同期的其他 C++17 变化
 
@@ -319,7 +319,7 @@ pmr 把「分配策略」从类型搬到对象，代价也随之转移：
 
 - 资源生命周期：容器不拥有资源，资源必须先于所有使用它的容器销毁；栈上的 `monotonic_buffer_resource` 与堆上的容器混用是常见悬空来源。
 - 单调资源不单独释放：`monotonic_buffer_resource` 适合「整批一起丢」的场景；如果元素频繁删除，内存不会回收。
-- 拷贝语义反直觉：容器拷贝默认改用默认资源，而不是源资源；需要保持一致时必须显式传资源。
+- 复制语义反直觉：容器复制默认改用默认资源，而不是源资源；需要保持一致时必须显式传资源。
 - 类型擦除后不可查询：资源指针可以从 `polymorphic_allocator` 取出，但经过一次类型擦除接口（如 `std::function` 风格的 API）后，标准设施没有统一方式把资源取回。
 - 虚调用成本：每次分配至少一次虚函数调用，模板分配器则可以内联；对分配极频繁的热路径，pmr 不一定更快，需要基准验证。
 - ABI 边界：资源接口是虚基类，跨 DLL/SO 传递资源对象要求两侧 ABI 与异常模型一致。
@@ -568,7 +568,7 @@ C++23 与 C++26 的落地情况：
 
 `allocator_traits` 必须先于第一个容器完成。它包含三部分：成员类型与别名、静态函数的默认实现、传播 traits 的默认值。容器只通过 traits 访问分配器，不直接调用 `allocate`、不假设 `pointer` 是裸指针。[标准 allocator.traits]
 
-最小分配器只要求 `value_type`、`allocate`、`deallocate`、可拷贝构造与相等比较。实现矩阵应至少覆盖：无状态分配器、有状态分配器、fancy pointer 分配器、过度对齐类型。
+最小分配器只要求 `value_type`、`allocate`、`deallocate`、可复制构造与相等比较。实现矩阵应至少覆盖：无状态分配器、有状态分配器、fancy pointer 分配器、过度对齐类型。
 
 ### 10.2 传播矩阵是容器骨架的一部分
 
@@ -576,13 +576,13 @@ C++23 与 C++26 的落地情况：
 
 | 场景 | 需要验证的行为 |
 | --- | --- |
-| 拷贝构造 | `select_on_container_copy_construction` 的返回值被使用 |
-| 拷贝赋值 | `POCCA` 为真：先释放旧存储再传播；为假：不传播，必要时重分配 |
+| 复制构造 | `select_on_container_copy_construction` 的返回值被使用 |
+| 复制赋值 | `POCCA` 为真：先释放旧存储再传播；为假：不传播，必要时重分配 |
 | 移动赋值 | `POCMA` 为真：接管存储与分配器；为假且相等：接管存储；为假且不等：逐元素移动 |
 | `swap` | `POCS` 为真：交换分配器；为假且相等：交换存储；为假且不等：不得调用（标准为未定义行为） |
 | 析构 | 用构造时保存的分配器释放 |
 
-这五项也是代码评审的检查表。历史上最危险的缺陷形态是「用 A 分配、用 B 释放」，它通常不会在单测中立刻暴露，而是在跨分配器拷贝或异常回滚时出现。[推断]
+这五项也是代码评审的检查表。历史上最危险的缺陷形态是「用 A 分配、用 B 释放」，它通常不会在单测中立刻暴露，而是在跨分配器复制或异常回滚时出现。[推断]
 
 ### 10.3 constexpr 从第一天设计
 
@@ -604,7 +604,7 @@ C++23 之后，若容器想在增长时利用分配器的尺寸反馈，需要�
 
 pmr 依赖容器、字符串、`mutex`/`atomic`（同步池资源需要同步原语）与 `vector`（资源内部实现常用容器）。因此它应排在容器之后，而不是与 `allocator_traits` 同时做。可以先实现 `memory_resource` 接口、`polymorphic_allocator`、`new_delete_resource`、`null_memory_resource` 与 `monotonic_buffer_resource`，池资源随后补。
 
-pmr 的验收重点是语义而不是性能：拷贝构造是否回落到默认资源、`select_on_container_copy_construction` 是否返回默认构造分配器、`operator=` 是否被删除、不相等的两个资源容器是否被禁止 `swap`。[标准 memory.resource]
+pmr 的验收重点是语义而不是性能：复制构造是否回落到默认资源、`select_on_container_copy_construction` 是否返回默认构造分配器、`operator=` 是否被删除、不相等的两个资源容器是否被禁止 `swap`。[标准 memory.resource]
 
 ### 10.6 兼容策略要显式
 
@@ -631,7 +631,7 @@ pmr 的验收重点是语义而不是性能：拷贝构造是否回落到默认�
 2. 不要让 `propagate_on_container_swap` 的「不相等」路径静默通过：标准规定未定义行为，实现应在 hardening 模式下断言。
 3. 不要假设 `max_align_t` 足够：过度对齐类型必须走对齐分配。
 4. 不要用 `allocate_at_least` 的请求值释放：必须用返回的 `count`。
-5. 不要让 pmr 容器跨资源边界拷贝后仍被当作同一资源：拷贝默认回落到默认资源。
+5. 不要让 pmr 容器跨资源边界复制后仍被当作同一资源：复制默认回落到默认资源。
 6. 不要在常量求值路径泄漏内存：瞬时分配必须成对释放。
 7. 不要保留 `allocator_traits` 特化口子：它会阻止后续协议扩展。
 8. 不要忽略 `basic_string` 的分配器传播：`operator+` 的传播规则曾是实现分歧点，C++20 才统一（P1165R1）。
@@ -699,7 +699,7 @@ C++20 至 C++26：
 | 默认构造 | 绑定 `get_default_resource()` |
 | `propagate_on_container_copy_assignment` / `move_assignment` / `swap` | 全为 `false_type` |
 | `select_on_container_copy_construction` | 返回默认构造的分配器（默认资源），不继承源资源 |
-| 拷贝赋值 | 被删除（P0337R0） |
+| 复制赋值 | 被删除（P0337R0） |
 | `construct` | 执行 uses-allocator 构造，嵌套容器自动共享资源 |
 | 相等性 | 由底层资源的 `is_equal` 决定 |
 | `destroy` | C++23 弃用、C++26 撤回弃用（P2875R4） |

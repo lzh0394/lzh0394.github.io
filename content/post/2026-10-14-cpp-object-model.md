@@ -94,9 +94,9 @@ C++20 起，`[intro.object]` 正式引入「隐式创建对象」：某些操作
 
 - 非常量求值中，开始一个 `unsigned char` 或 `std::byte` 数组的生命期的操作，会在该数组占据的存储区域内隐式创建对象（`std::byte` 自 C++17 起）。
 - 分配函数：`operator new`、`operator new[]`，以及 `std::malloc`、`std::calloc`、`std::realloc`、`std::aligned_alloc`（C++17 起）。任何对名为 `operator new`／`operator new[]` 的函数的隐式或显式调用，都会在返回的存储区域隐式创建对象，并返回指向合适创建对象的指针。
-- 对象表示拷贝函数：`std::memcpy`、`std::memmove`（C++20 起 `std::bit_cast` 的结果亦然），在目标区域或结果中隐式创建对象。`memcpy` 的适用条件仍是源对象 trivially copyable、目标区域对齐与大小足够。
+- 按对象表示复制的函数：`std::memcpy`、`std::memmove`（C++20 起 `std::bit_cast` 的结果亦然），在目标区域或结果中隐式创建对象。`memcpy` 的适用条件仍是源对象 trivially copyable、目标区域对齐与大小足够。
 - C++23 起还有 `std::start_lifetime_as` 与 `std::start_lifetime_as_array`，这两个是显式索取，不是隐式触发。
-- 库侧的其他来源：`std::allocator<T>::allocate`、union 类型隐式定义的拷贝／移动特殊成员函数（见 `[obj.lifetime]`、`[mem.res.public]`、`[bit.cast]`、`[cstring.syn]` 的注）。
+- 库侧的其他来源：`std::allocator<T>::allocate`、union 类型隐式定义的复制／移动特殊成员函数（见 `[obj.lifetime]`、`[mem.res.public]`、`[bit.cast]`、`[cstring.syn]` 的注）。
 
 另外两类「创建」不属于隐式创建那一节，但常被一起问：隐式改变 `union` 活跃成员时开始该成员的生命期（`[class.union]`），以及从纯右值创建临时对象（`[conv.rval]`/1 所称的 temporary materialization conversion）。`[intro.object]`/1 把对象来源统一列为：定义、new 表达式、隐式创建对象的操作、隐式改变 union 活跃成员、创建临时对象。
 
@@ -158,7 +158,7 @@ C 的对象模型是「存储 + 类型 + 左值」，不讲生命；C++ 在这�
 - 聚合初始化：C89 起就允许「第一个成员之后跳过」的初始化器；C++ 直到 C++20 才引入 designated initializers，且限制更严——只能是直接非静态数据成员、必须按声明顺序、不能嵌套、没有数组设计器（`[dcl.init.list]`）。所以 `struct S s = {.b = 1, .a = 2};` 在 C 里合法，在 C++ 里（即便 C++20）非法。
 - `static`：C 里文件作用域 `static` 是内部链接、块作用域 `static` 是持久存储；C++ 里块作用域还有 `static` 局部变量的线程安全初始化（C++11 起），语义已经不同。
 - `union`：C99 起明确允许读非活跃成员重新解释字节；C++ 长期只允许读活跃成员，C++20 才通过隐式开始生命期放宽一部分（见 8.1）。
-- `malloc` 与字节拷贝：C 里 `malloc` 加写入、`memcpy` 任意字节都是「字节就是字节」；C++20 才用隐式创建对象和隐式生命期类型把这些惯用法正式覆盖，之前严格说是 UB。
+- `malloc` 与字节复制：C 里 `malloc` 加写入、`memcpy` 任意字节都是「字节就是字节」；C++20 才用隐式创建对象和隐式生命期类型把这些惯用法正式覆盖，之前严格说是 UB。
 - `thread_local`：C11 用 `_Thread_local`，C++11 用 `thread_local`；类类型的 C++ 版本多了构造／析构，语义不完全对应。
 
 ### 10.2 C 有标准、C++ 没有对应物的
@@ -179,7 +179,7 @@ C 的对象模型是「存储 + 类型 + 左值」，不讲生命；C++ 在这�
 | --- | --- | --- |
 | 通过 `unsigned char*`（或 `std::byte*`）读写任意对象的字节 | 标准明确允许用字符类型检查对象表示 | 同样允许；C++17 起 `std::byte` 是更合适的选择 |
 | `malloc` 之后直接写入并强制转换使用 | `malloc` 提供可存放任意类型对象的存储 | 仅隐式生命期类型成立（C++20 隐式创建），其余仍需 placement new |
-| `memcpy` 拷贝整个对象 | 对对象逐字节拷贝，类型不匹配时限制宽松 | 源必须是 trivially copyable；目标区域由 memcpy 隐式创建对象 |
+| `memcpy` 复制整个对象 | 对对象逐字节复制，类型不匹配时限制宽松 | 源必须是 trivially copyable；目标区域由 memcpy 隐式创建对象 |
 | `union` 类型双关 | C99 起明确允许读非活跃成员 | C++20 才通过隐式开始生命期覆盖一部分 |
 | 按 common initial sequence 访问 | 标准有规定 | C++ 有对应规定，但要求 standard-layout |
 

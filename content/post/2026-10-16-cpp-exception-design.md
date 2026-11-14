@@ -34,15 +34,15 @@ summary: "按「抛出的是什么对象」「谁能接住它」「栈怎么展�
 
 `throw` 不是「跳转指令」，它先造一个对象。
 
-- `throw-expression` 的类型是 void，但它的操作数要先经过数组到指针、函数到指针转换，再去掉顶层 cv，然后拷贝初始化出一个异常对象（[expr.throw]）。异常对象的类型就是操作数去掉顶层 cv 后的类型。
+- `throw-expression` 的类型是 void，但它的操作数要先经过数组到指针、函数到指针转换，再去掉顶层 cv，然后复制初始化出一个异常对象（[expr.throw]）。异常对象的类型就是操作数去掉顶层 cv 后的类型。
 - 异常对象具有动态存储期（dynamic storage duration），在抛出点初始化（[except.throw]/3）。类型不能是不完整类型、抽象类类型，也不能是指向不完整类型的指针（`cv void*` 除外）。
 - 这块存储怎么分配是 unspecified，标准只规定：异常对象在最后一个引用它的点之后才能被释放，且「销毁点」里有一个 unspecified 的最后者，其余都排在它之前（[except.throw]/4）。实现可以在那之后回收。
-- 异常对象的类型 T 必须能从 `const T` 左值拷贝初始化，且析构函数可访问（[except.throw]/5）。所以 move-only 类型不能直接抛。
-- 抛一个局部自动对象时，可以直接把它构造进异常对象而省略拷贝，并且按右值处理（[class.copy.elision]/1.2）：`Thing t; throw t;` 走的是移动构造或被省略。函数形参没有这个待遇（同条的示例 3 里 `throw x;` 不移动、`throw y;` 移动）。异常对象本身始终是左值，handler 里不能把它移走。
+- 异常对象的类型 T 必须能从 `const T` 左值复制初始化，且析构函数可访问（[except.throw]/5）。所以 move-only 类型不能直接抛。
+- 抛一个局部自动对象时，可以直接把它构造进异常对象而省略复制，并且按右值处理（[class.copy.elision]/1.2）：`Thing t; throw t;` 走的是移动构造或被省略。函数形参没有这个待遇（同条的示例 3 里 `throw x;` 不移动、`throw y;` 移动）。异常对象本身始终是左值，handler 里不能把它移走。
 - `throw;` 不造新对象，而是复用当前正在处理的异常对象（[expr.throw]/2）；确实没有正在处理的异常时，结果是 `terminate`，不是未定义行为。
 - 从异常对象初始化完成、到某个 handler 被激活之间，异常处于 uncaught 状态（[except.throw]/6）；`std::uncaught_exceptions` 数的就是它（见第六节）。
 
-一个容易被忽略的推论：抛出的对象是拷贝，所以 handler 改不到抛出点那个对象；跨线程传播需要显式搬运（`std::exception_ptr`）。异常对象大小也不受限制，这正是后来 P0709 想改掉的地方（见参考里的 `herbception.md`）。
+一个容易被忽略的推论：抛出的对象是复制，所以 handler 改不到抛出点那个对象；跨线程传播需要显式搬运（`std::exception_ptr`）。异常对象大小也不受限制，这正是后来 P0709 想改掉的地方（见参考里的 `herbception.md`）。
 
 ---
 
@@ -62,7 +62,7 @@ summary: "按「抛出的是什么对象」「谁能接住它」「栈怎么展�
 - handler 按书写顺序尝试，第一个匹配的胜出（/4）；`catch (...)` 匹配任何东西，因此必须是最后一个（/5）。
 - 没有匹配就沿动态调用链往外找同一线程里层层的 `try`（/6）；都没有，结果就是 `terminate`（/8），而不是把异常传给调用者当作返回值。
 - `exception-declaration` 不能是不完整类型、抽象类类型、右值引用类型；数组和函数类型会被调整为指针（/1）。这也意味着 handler 里没法从异常对象移动。
-- catch 形参对象的初始化方式很讲究（/15）：`T` 是 `E` 的基类时从基类子对象拷贝初始化，否则从异常对象拷贝初始化。按值捕获必然是一次拷贝，异常对象本身不受影响（可能被切片）；按引用捕获操作的才是异常对象。
+- catch 形参对象的初始化方式很讲究（/15）：`T` 是 `E` 的基类时从基类子对象复制初始化，否则从异常对象复制初始化。按值捕获必然是一次复制，异常对象本身不受影响（可能被切片）；按引用捕获操作的才是异常对象。
 - `currently handled exception` 是最近激活且仍未退出的 handler 对应的那个异常（/10）。
 
 ---
@@ -76,7 +76,7 @@ summary: "按「抛出的是什么对象」「谁能接住它」「栈怎么展�
 - 如果某个析构函数在展开途中被异常终止，那么该析构函数体之后本来还会执行的析构调用仍会执行（/3 末段），例如虚基类子对象。
 - 这些销毁被定序在进入构造函数/析构函数的函数 try 块 handler 之前（/3）。
 
-异常机制自身的失败统一落到 `std::terminate`（[except.terminate]/1 的注释里列了完整清单），常见的几类：异常对象初始化期间抛出（例如拷贝构造失败）、找不到 handler、查找 handler 时走出非抛出规格的函数体、展开途中析构函数抛异常、静态或线程存储期对象初始化/销毁抛出、`atexit` 注册的函数抛出、无异常可重抛时的 `throw;`、`nested_exception::rethrow_nested` 无捕获、线程初始函数抛出、`std::thread` 析构在 joinable 时被调用、`condition_variable::wait` 后置条件不成立等。
+异常机制自身的失败统一落到 `std::terminate`（[except.terminate]/1 的注释里列了完整清单），常见的几类：异常对象初始化期间抛出（例如复制构造失败）、找不到 handler、查找 handler 时走出非抛出规格的函数体、展开途中析构函数抛异常、静态或线程存储期对象初始化/销毁抛出、`atexit` 注册的函数抛出、无异常可重抛时的 `throw;`、`nested_exception::rethrow_nested` 无捕获、线程初始函数抛出、`std::thread` 析构在 joinable 时被调用、`condition_variable::wait` 后置条件不成立等。
 
 「是否先展开栈」在规范里分三档（[except.terminate]/2），这一条常被误记成统一行为：
 
@@ -113,7 +113,7 @@ P0003R5（Alisdair Meredith，2016-11-11，audience CWG）对动态规格的评�
 
 - 移除是可诊断的破坏性变化：带 potentially-throwing 动态规格的合法 C++14 声明在 C++17 变成 ill-formed（新增 [diff.cpp14.except]）。
 - `std::unexpected`、`std::set_unexpected`、`std::get_unexpected`、`unexpected_handler` 整条链一并退场，进入 zombie names；现行草案的 [except.special] 里只剩 `std::terminate`，`<exception>` 里也没有它们了。
-- `std::bad_exception` 保留下来，但释义被改写为「`current_exception` 在当前异常对象拷贝失败时返回的 `exception_ptr` 所指的类型」——原先它服务于 `unexpected` 的替换逻辑。
+- `std::bad_exception` 保留下来，但释义被改写为「`current_exception` 在当前异常对象复制失败时返回的 `exception_ptr` 所指的类型」——原先它服务于 `unexpected` 的替换逻辑。
 - 兼容性补救（论文给出的写法）：老代码里 `void legacy() throw(Something)` 想保留「只能抛这一种、否则终止」的语义，可以改成函数 try 块，`catch (const Something&) { throw; }` 加上 `catch (...) { terminate(); }`。
 - 同一份论文重写的兼容性附录 C.2.6 [diff.cpp03.special] 记下了另一处破坏性变化：「用户声明的析构函数具有隐式异常规格」——这是 C++11 相对 C++03 的变化，效果是 C++03 里会抛出的析构在 C++11 下直接 `terminate`（且不再经过 `unexpected`）。
 
@@ -172,7 +172,7 @@ MSVC 走另一条路：x64 上是表驱动的，非叶函数在 `.pdata` 里登�
 ## 参考
 
 - C++ 标准草案：<https://eel.is/c++draft/>
-  - 相关锚点：`[expr.throw]`（抛出表达式的类型与转换）、`[except.throw]`（异常对象的存储期与销毁点）、`[except.handle]`（匹配规则与 handler 激活）、`[except.ctor]`（栈展开）、`[except.spec]`（异常规格）、`[except.terminate]`（`terminate` 的全部触发情形）、`[except.special]`、`[class.copy.elision]`（抛出与捕获时的拷贝省略）。
+  - 相关锚点：`[expr.throw]`（抛出表达式的类型与转换）、`[except.throw]`（异常对象的存储期与销毁点）、`[except.handle]`（匹配规则与 handler 激活）、`[except.ctor]`（栈展开）、`[except.spec]`（异常规格）、`[except.terminate]`（`terminate` 的全部触发情形）、`[except.special]`、`[class.copy.elision]`（抛出与捕获时的复制省略）。
 - Itanium C++ ABI 的异常处理章节（Level I/II/III 分层、两阶段展开、`__cxa_*` 接口与紧急缓冲）：<https://itanium-cxx-abi.github.io/cxx-abi/abi-eh.html>
 - WG21 文稿：
   - [P0003R5《Removing Deprecated Exception Specifications from C++17》](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0003r5.html)（含改写后的 [except.spec]、[except.terminate]、Compatibility 附录与 `<exception>` 概要；本文的移除范围按原文核对）。

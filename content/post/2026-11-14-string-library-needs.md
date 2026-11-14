@@ -98,7 +98,7 @@ summary: "从标准与提案、三家实现、行业实践三条证据线，梳�
 字符串是少数「性能需求可以直接写成接口约束」的库。可观察的预算有四档：
 
 - 零分配：热路径拼接、日志、错误消息。Abseil 用 `StrCat`/`StrAppend`（函数，一次预留）[doc]（[strings guide](https://abseil.io/docs/cpp/guides/strings)），LLVM 用 `Twine`（表达式模板，零临时串）。
-- 一次分配：已知总长的构造与序列化。P1072R10 的动机段把「多付初始化、多付拷贝、多付簿记」列为三害 [paper]（[P1072R10](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1072r10.html)）。
+- 一次分配：已知总长的构造与序列化。P1072R10 的动机段把「多付初始化、多付复制、多付簿记」列为三害 [paper]（[P1072R10](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1072r10.html)）。
 - 吞吐：解析器与校验器。simdjson 自述以 6 GB/s 压缩、13 GB/s 校验 UTF-8、3.5 GB/s 处理 NDJSON 为目标 [doc]（[simdjson README](https://github.com/simdjson/simdjson/blob/40a686ab89dc5ee58ec10d0514dd5c99abbc472b/README.md)）。
 - 编译期：常量求值、静态检查、零运行期初始化。`std::format` 的 `consteval` 格式串检查是典型 [paper]（[P2216R3](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2216r3.html)）。
 
@@ -148,7 +148,7 @@ summary: "从标准与提案、三家实现、行业实践三条证据线，梳�
 
 ### 3.2 `string_view`：解决了借用，留下了三个缺口
 
-C++17 引入 `string_view` 的初衷是「非拥有、廉价、按值传递的字符串引用」。N3921 的定义与 P0254 的整合提案都强调：构造与拷贝廉价，因此按值传递；从 `string_view` 构造 `string` 有代价，因此必须显式 [paper]（[P0254R2](https://wg21.link/p254)）。
+C++17 引入 `string_view` 的初衷是「非拥有、廉价、按值传递的字符串引用」。N3921 的定义与 P0254 的整合提案都强调：构造与复制廉价，因此按值传递；从 `string_view` 构造 `string` 有代价，因此必须显式 [paper]（[P0254R2](https://wg21.link/p254)）。
 
 它留下了三个结构性缺口：
 
@@ -160,7 +160,7 @@ C++17 引入 `string_view` 的初衷是「非拥有、廉价、按值传递的�
 
 ### 3.3 写入路径：`resize_and_overwrite` 是一次定向妥协
 
-对性能敏感的用户，往 `string` 写数据只有三个不理想的选择：`resize` 先零初始化再覆盖；写临时缓冲再拷贝；`reserve` 后反复小 `append` 并维护终止符。P1072R10 把这三害写成动机，并提出回调式接口：把「不初始化就写入」的能力借给用户，写完由回调返回实际长度 [paper]（[P1072R10 §1](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1072r10.html)）。
+对性能敏感的用户，往 `string` 写数据只有三个不理想的选择：`resize` 先零初始化再覆盖；写临时缓冲再复制；`reserve` 后反复小 `append` 并维护终止符。P1072R10 把这三害写成动机，并提出回调式接口：把「不初始化就写入」的能力借给用户，写完由回调返回实际长度 [paper]（[P1072R10 §1](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1072r10.html)）。
 
 值得注意的是委员会的取舍：LEWG 投票记录「Willing to solve this for string without solving it for vector」为 SF 6 / F 9 / N 2 / A 1 / SA 0，即明确接受 `string` 与 `vector` 的接口不对称 [paper]（同上）。这等于承认：`string` 不是「字符的 vector」，而是有独立语义的类型。
 
@@ -184,7 +184,7 @@ C++26 的 `std::text_encoding` 提供了 `literal()`、`environment()`、`mib()`
 
 P3655R6（2026-10-18，目标 C++29）提议 `std::cstring_view`：非拥有、但保证 `data()[size()]` 为空字符的视图。它的论证链值得完整记录，因为它是「用户需求如何变成类型设计」的样本：
 
-- 需要 NUL 的地方只能四选一：传 `const char*`（可能重复 `strlen`）、传 `const std::string&`（可能多余拷贝与分配）、传 `string_view` 再拷贝、或传 `string_view` 并依赖不可强制的前置条件 [paper]（[P3655R6 §5.1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3655r6.html)）。
+- 需要 NUL 的地方只能四选一：传 `const char*`（可能重复 `strlen`）、传 `const std::string&`（可能多余复制与分配）、传 `string_view` 再复制、或传 `string_view` 并依赖不可强制的前置条件 [paper]（[P3655R6 §5.1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3655r6.html)）。
 - 历史上尝试过：2019 年 P1402 在 Kona 的 LEWGI 被否，结论是「We will not pursue this problem space」；2024 年 P3081 的核心安全 profile 又把 `cstring_view` 作为「GSL 常见需求、标准缺失」的例子写进旁注 [paper]（同上）。
 - GitHub 上 `cstring_view`/`zstring_view` 的自定义实现从 1.9k 增长到 2.1k，微软、谷歌与大量小项目各自实现 [paper]（同上）。
 - 设计原则按重要性排序：非分配、类型系统传播「有终止符」、与 `string`/`string_view` 行为一致、最小惊讶、`size()` 与 `strlen(c_str())` 一致 [paper]（同上）。
@@ -219,7 +219,7 @@ P3655R6（2026-10-18，目标 C++29）提议 `std::cstring_view`：非拥有、�
 ### 4.2 系统软件与基础设施库作者（LLVM、Abseil、Chromium）
 
 - 场景：编译器、日志、RPC、浏览器内核；字符串是高频、跨模块的公共货币。
-- 硬约束：零拷贝的参数传递；可预测的分配；与自有容器/哈希表协同；跨平台（含无异常构建）。
+- 硬约束：零复制的参数传递；可预测的分配；与自有容器/哈希表协同；跨平台（含无异常构建）。
 - 可牺牲项：编码正确性（普遍按字节处理）、API 丰富度（宁可少而精）。
 - 证据：LLVM 几乎所有解析 API 用 `StringRef`，且明确「不拥有、不可存」[impl]（[StringRef.h#L49](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/ADT/StringRef.h#L49)）；`Twine` 用 rope 表达式模板消除临时串，但注释禁止存储 [impl]（[Twine.h#L26](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/ADT/Twine.h#L26)）；`SmallString<N>` 把内联容量显式化 [impl]（[SmallString.h#L23](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/ADT/SmallString.h#L23)）；`StringMap` 是专为字符串键设计的哈希表 [impl]（[StringMap.h#L10](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/ADT/StringMap.h#L10)）；Abseil 用 `StrCat`/`StrAppend` 明确反模式，并用 `Cord` 处理大文本 [doc]（[strings guide](https://abseil.io/docs/cpp/guides/strings)）；Chromium 长期维护自研 `base::StringPiece`，迁移提交直言「Chromium has forked a fundamental C++ vocabulary type」[impl]（[迁移提交](https://chromium.googlesource.com/chromium/src/net/+/b4f8fb776a13d44583d75065b4490daa14c6c1e4)）。
 - 设计含义：这一群体是「view-first」最坚定的实践者：形参统一借用视图，返回统一拥有类型；零分配拼接用函数或表达式模板；容器层自造专用哈希表。标准库对他们的价值主要是「公共词汇」，而不是「全部实现」。
@@ -251,7 +251,7 @@ P3655R6（2026-10-18，目标 C++29）提议 `std::cstring_view`：非拥有、�
 - 场景：交易撮合、行情解析、FIX/ITCH 协议、日志聚合、JSON/CSV 处理；延迟以微秒到纳秒计，吞吐以 GB/s 计。
 - 硬约束：热路径零分配、无锁或低争用、缓存局部性、locale 无关的数值解析与格式化、可预测的 p99.9 尾延迟。
 - 可牺牲项：通用 Unicode 文本处理、标准库 API 兼容性、异常、可读性。
-- 证据：低延迟交易系统的工程总结指出，`std::string` 的 SSO 阈值会造成「短字段走栈、长字段走堆」的非确定性延迟，某项目把零拷贝解析从 730 ns 降到 520 ns [community]（[NexusFix](https://github.com/StratCraftsAI/NexusFix)）；fast_float 声称比 `strtod` 快 4—10 倍，并进入 GCC 12、MySQL、DuckDB、Chromium、Redis、WebKit [impl]（[fast_float](https://github.com/fastfloat/fast_float)）；fmt 用 Dragonbox 算法保证正确舍入、最短表示与 round-trip [impl]（[fmt](https://github.com/fmtlib/fmt)）；simdjson 在单核上达到 GB/s 级解析 [paper]（[Parsing Gigabytes of JSON per Second](https://arxiv.org/abs/1902.08318)）；P0067 把「无 locale、无分配、无运行时格式串」写成接口要求 [paper]（[P0067R5](https://wg21.link/p67)）。
+- 证据：低延迟交易系统的工程总结指出，`std::string` 的 SSO 阈值会造成「短字段走栈、长字段走堆」的非确定性延迟，某项目把零复制解析从 730 ns 降到 520 ns [community]（[NexusFix](https://github.com/StratCraftsAI/NexusFix)）；fast_float 声称比 `strtod` 快 4—10 倍，并进入 GCC 12、MySQL、DuckDB、Chromium、Redis、WebKit [impl]（[fast_float](https://github.com/fastfloat/fast_float)）；fmt 用 Dragonbox 算法保证正确舍入、最短表示与 round-trip [impl]（[fmt](https://github.com/fmtlib/fmt)）；simdjson 在单核上达到 GB/s 级解析 [paper]（[Parsing Gigabytes of JSON per Second](https://arxiv.org/abs/1902.08318)）；P0067 把「无 locale、无分配、无运行时格式串」写成接口要求 [paper]（[P0067R5](https://wg21.link/p67)）。
 - 设计含义：这一群体把「分配次数」当成接口的一等属性：需要写入调用方缓冲的 API（`format_to`、`to_chars`、`resize_and_overwrite`）、栈上固定容量缓冲、以及返回视图而非拥有对象的批量解析接口。SSO 既是优化也是不确定性来源，这一点在标准库层面无法通过配置解决。
 
 ### 4.6 企业桌面、GUI 与本地化
@@ -367,7 +367,7 @@ P3655R6（2026-10-18，目标 C++29）提议 `std::cstring_view`：非拥有、�
 | 分歧点 | A 方立场 | B 方立场 | 现状 |
 |---|---|---|---|
 | 源编码 | Qt：全库 UTF-16，与系统 API 对齐 | Rust/网络生态：UTF-8 不变量 | C++ 标准两者都不承诺，边界转换由应用承担 |
-| 拷贝策略 | Qt：COW 隐式共享，值语义像 int | 标准库：C++11 后 basic_string 禁止 COW | 共享诉求外置为 Cord/fbstring 大串惰性共享 |
+| 复制策略 | Qt：COW 隐式共享，值语义像 int | 标准库：C++11 后 basic_string 禁止 COW | 共享诉求外置为 Cord/fbstring 大串惰性共享 |
 | 格式串 | 编译期检查、类型安全 | i18n 翻译文件只能在运行期拿到 | 两套入口（format/vformat）并存 |
 | Unicode 归属 | Boost.Text：算法进库甚至进标准 | ICU：算法与数据外置，标准只管表示 | 实际胜出的是 ICU 路线 |
 | 异常 | 标准库/Abseil：分配失败抛 bad_alloc | EASTL/嵌入式：无异常是硬约束 | 同一 API 需在两种构建下可用 |
@@ -383,7 +383,7 @@ P3655R6（2026-10-18，目标 C++29）提议 `std::cstring_view`：非拥有、�
 
 视图的价值在于零成本，零成本意味着不拥有、不延长生命周期，于是悬垂成为默认风险。Sutter 的原话是「dangling is almost the default behavior」[talk]（[Sutter's Mill](https://herbsutter.com/2018/09/20/)）。标准层能做的只有：提供检测引用绑定到临时对象的 trait（P2255）[paper]、用注释与静态分析补足（LLVM 的 `LLVM_LIFETIME_BOUND`）[impl]、以及在实现层加 hardening 断言 [impl]。
 
-折中：接口按「借用只在本次调用内有效」设计，跨调用存储必须显式拷贝；返回视图的函数加生命周期注解；把「视图作成员」视为需要审查的设计气味。
+折中：接口按「借用只在本次调用内有效」设计，跨调用存储必须显式复制；返回视图的函数加生命周期注解；把「视图作成员」视为需要审查的设计气味。
 
 ### 6.2 NUL 终止 vs 通用视图
 
@@ -590,7 +590,7 @@ Qt 用隐式共享实现值语义，但文档自认迭代器行为与 STL 不同
 ### 8.4 评审清单：设计或选型时问十个问题
 
 1. 形参是否统一为借用视图？返回值是否统一为拥有类型？
-2. 视图的生命周期约束是否写进类型、注解或文档？跨调用存储是否被禁止或显式拷贝？
+2. 视图的生命周期约束是否写进类型、注解或文档？跨调用存储是否被禁止或显式复制？
 3. 是否区分「字节 / 码元 / 码点 / 字素」四种索引语义？
 4. 编码约定在哪里表达？边界转换是否显式且可失败？
 5. NUL 终止、嵌入 NUL、长度前缀三种约定是否用不同类型区分？
@@ -614,7 +614,7 @@ Qt 用隐式共享实现值语义，但文档自认迭代器行为与 STL 不同
 - `sizeof(std::string)` 与 SSO：24/32/32 字节与 15/22/15 字符由源码布局推导，未在本机实测（编译器环境不完整）。
 - 二手来源：EASTL 的 SSO 容量 23 与无异常定位来自二手分析；Boost.Text 是否正式进入 Boost 仅有 2019 年评审征集；folly `FBString.md` 与 Chromium `string_piece.h` 取自镜像站；Qt `QStringBuilder`、Abseil 的异常策略与 `ABSL_FORMAT` 宏名、`flat_hash_map` 异构查找细节未取证。
 - 平台细节：Godot `String` 的 COW 原句在抓取时被截断；Unreal 非 Windows 平台的 `TCHAR` 宽度、UE5 源码编码细节待核实。
-- 未取证项：Victor Ciura 的 CppCon 2018 演讲 PDF、Apache Arrow 零拷贝文档、.NET `String` 与 Wasm/Emscripten 的字符串约定。
+- 未取证项：Victor Ciura 的 CppCon 2018 演讲 PDF、Apache Arrow 零复制文档、.NET `String` 与 Wasm/Emscripten 的字符串约定。
 - 提案状态：P2728 与 P4246 的采纳状态无法从本地 disposition 索引确认，只能确认「仍在迭代」；P1040（`std::embed`）的采纳状态同样待核实。
 - 方法局限：行业部分依赖公开文档、演讲与博客，缺少系统性问卷与可复现基准；所有「强/中/弱」矩阵条目都是对证据的归纳 [推断]。
 - 无性能实测：本文未运行基准测试；引用的性能数字均来自来源方，未独立复测。

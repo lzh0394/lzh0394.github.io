@@ -22,7 +22,7 @@ summary: "按「标准自己撤销/替换」「一路打补丁才勉强能用」
 | --- | --- | --- | --- |
 | 动态异常规范 `throw(X)` | 运行时检查、影响优化，且漏抛直接 `std::terminate` | C++11 弃用、C++17 移除（P0003R5）；最后一个形式 `throw()` 在 C++17 已等价于 `noexcept(true)`，直到 C++20 才从标准里删掉（P0619R4） | `noexcept`、`noexcept(...)` |
 | `export template` | C++98 唯一一次把模板定义与实例化分离的尝试，几乎无人实现 | C++11 列入 deprecated，C++20 移除（P0619R4） | 无，回到「定义放头文件」 |
-| `std::auto_ptr` | 拷贝即转移所有权，和容器、算法都不兼容 | C++11 弃用，C++17 移除（N4190） | `std::unique_ptr` |
+| `std::auto_ptr` | 复制即转移所有权，和容器、算法都不兼容 | C++11 弃用，C++17 移除（N4190） | `std::unique_ptr` |
 | 旧 `<functional>` 设施 | `unary_function`、`binary_function`、`ptr_fun`、`mem_fun`、`bind1st`、`bind2nd` | C++17 移除（N4190） | lambda、`std::mem_fn`、`std::bind` |
 | `std::random_shuffle` | 用 `std::rand` 实现，随机源不可控 | C++14 弃用，C++17 移除（N4190，弃用版本【待核】） | `std::shuffle` |
 | `throw()` 空异常规范 | 与动态异常规范同源 | C++11 起 `noexcept` 取代，C++17 起 `throw()` 等价于 `noexcept(true)`，C++20 随 P0619R4 删掉 | `noexcept` |
@@ -31,7 +31,7 @@ summary: "按「标准自己撤销/替换」「一路打补丁才勉强能用」
 | `std::atomic` 的默认构造 | C++11/14/17 规定默认构造后值未初始化 | C++20 修（P0883R2【待核】） | 默认构造值初始化 |
 | `shared_ptr::unique()` | 与 `use_count` 一样不可靠 | C++17 弃用，C++20 移除（P0619R4） | 无 |
 
-值得单独记的是 `auto_ptr` 那一行：它不是「用着不顺手」，而是拷贝语义与所有权语义直接冲突，标准用移除来承认这一点。与之对照，`std::shared_ptr`、`std::unique_ptr` 是重写，不是修补。
+值得单独记的是 `auto_ptr` 那一行：它不是「用着不顺手」，而是复制语义与所有权语义直接冲突，标准用移除来承认这一点。与之对照，`std::shared_ptr`、`std::unique_ptr` 是重写，不是修补。
 
 ---
 
@@ -103,7 +103,7 @@ C++11 之前，写错签名的「覆盖」是静默地新增一个虚函数，�
 
 `std::string` / `std::wstring` / `u8` 的编码混乱是另一条线：`u8"..."` 从 C++11 起一直是 `const char[]`，C++20 的 P0482R6 改成 `const char8_t[]`（文稿自己也把「`f(u8"text")` 由合法变为 ill-formed」写进 Annex C），破坏了源码兼容，同年又不得不出补救论文（P1423R3【待核】）。一个标准版本内先引入破坏再补救，是很典型的一次「改又后悔」。
 
-`std::function` 要求可拷贝构造，存不下 move-only 的可调用对象；C++23 才补 `std::move_only_function`（P0288R9【待核】）。
+`std::function` 要求可复制构造，存不下 move-only 的可调用对象；C++23 才补 `std::move_only_function`（P0288R9【待核】）。
 
 `std::async` 返回的 future，析构时会阻塞等待任务完成，加上默认策略是 `std::launch::async | std::launch::deferred`，「发射后不管」这种用法基本不可用；长期方向是 `std::execution`（P2300R5，C++26），而不是修补 future。
 
