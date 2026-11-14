@@ -6,7 +6,6 @@
 
 ## TODO
 
-- [ ] 修改主题，从 vendored 的 xmin 迁移到自建主题
 - [ ] h4 统一称「小节」（h2「章」、h3「节」已统一；四篇暂无 h4 引用，随下次修改落实）
 
 ## 项目概况
@@ -16,6 +15,7 @@
 - 远端：`https://github.com/lzh0394/lzh0394.github.io.git`，主分支 `main`
 - 内容全部是中文技术文章
 - 站点配置在 `hugo.yaml`
+- 主题自建：模板在 `layouts/`，样式在 `static/css/`，不使用第三方主题或前端框架
 - 构建只依赖 Hugo 二进制
 - markdownlint 依赖 npx
 
@@ -33,7 +33,7 @@
 
 ## 边界
 
-- 不修改 `themes/` 或者重装主题
+- 不引入第三方主题或前端框架；主题改动只落在 `layouts/` 与 `static/css/`
 - 不手动修改 `public/`
 - 不引入评论/搜索/统计
 - 提交不参考 Conventional Commits，使用一句话简单描述提交内容

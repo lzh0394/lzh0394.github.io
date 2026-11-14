@@ -1,0 +1,9 @@
+{{ define "main" }}
+<h1>{{ .Title | markdownify }}</h1>
+{{ .Content }}
+<ul class="terms">
+  {{ range .Pages }}
+  <li><a href="{{ .RelPermalink }}">{{ .Title | markdownify }}</a> <span class="count">({{ len .Pages }})</span></li>
+  {{ end }}
+</ul>
+{{ end }}

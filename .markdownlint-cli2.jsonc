@@ -13,7 +13,6 @@
     "public/**",
     "tmp/**",
     "_tmp/**",
-    "themes/**",
     ".tools/**",
     "node_modules/**"
   ],

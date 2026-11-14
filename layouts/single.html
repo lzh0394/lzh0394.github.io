@@ -1,0 +1,11 @@
+{{ define "main" }}
+<article>
+  <div class="article-meta">
+    <h1><span class="title">{{ .Title | markdownify }}</span></h1>
+    {{ if not .Date.IsZero }}
+    <p class="date"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006/01/02" }}</time></p>
+    {{ end }}
+  </div>
+  {{ .Content }}
+</article>
+{{ end }}

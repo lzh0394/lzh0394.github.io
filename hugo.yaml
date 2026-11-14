@@ -5,7 +5,6 @@ defaultContentLanguage: "zh-cn"
 locale: "zh-cn"
 
 title: "lzh0394"
-theme: "hugo-xmin"
 
 ignoreFiles: ["\\.Rmd$", "\\.Rmarkdown$", "_cache$"]
 

@@ -1,0 +1,231 @@
+:root {
+  --fg: #1a1a1a;
+  --bg: #fff;
+  --muted: #666;
+  --line: #ddd;
+  --code-bg: #f6f6f6;
+  --accent-bg: #eee;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 长链接、长标识符允许在任意位置折行，避免撑破版面 */
+a {
+  overflow-wrap: anywhere;
+}
+
+body {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+  color: var(--fg);
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-size: 17px;
+  line-height: 1.75;
+  text-align: justify;
+  overflow-wrap: break-word;
+}
+
+/* 头部、导航与页脚 */
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.menu li {
+  display: block;
+}
+
+.menu a {
+  text-decoration: none;
+  color: var(--fg);
+  background: var(--accent-bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.menu a:hover {
+  background: var(--line);
+}
+
+footer {
+  color: var(--muted);
+  font-size: 0.9em;
+  text-align: center;
+}
+
+hr {
+  border: 0;
+  border-top: 1px dashed var(--line);
+}
+
+/* 文章头 */
+.article-meta {
+  text-align: center;
+}
+
+.article-meta h1 {
+  margin-bottom: 0.25em;
+}
+
+.title {
+  font-size: 1.5em;
+}
+
+.article-meta .date {
+  margin-top: 0;
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+/* 文章列表 */
+.posts,
+.terms {
+  padding: 0;
+  list-style: none;
+}
+
+.posts li,
+.terms li {
+  margin: 0.25em 0;
+}
+
+.posts .date,
+.terms .count {
+  color: var(--muted);
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 正文 */
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.4;
+  text-align: left;
+}
+
+h2 {
+  margin-top: 2em;
+}
+
+/* 宽表格在窄屏内横向滚动，不撑破页面 */
+.table-wrap {
+  max-width: 100%;
+  margin: 1em 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table {
+  margin: 0 auto;
+  border-collapse: collapse;
+}
+
+th {
+  background: var(--accent-bg);
+}
+
+th,
+td {
+  padding: 0.25em 0.6em;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+th.align-center,
+td.align-center {
+  text-align: center;
+}
+
+th.align-right,
+td.align-right {
+  text-align: right;
+}
+
+img,
+iframe,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+blockquote {
+  margin: 1em 0;
+  padding: 0.25em 1em;
+  background: var(--code-bg);
+  border-left: 4px solid var(--line);
+}
+
+/* 代码字体：Sarasa Mono SC 完整字体的 woff2，见 static/fonts/ 与其中的 OFL 许可 */
+@font-face {
+  font-family: "Sarasa Mono SC";
+  src: url("../fonts/sarasa-mono-sc-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 代码 */
+code {
+  padding: 0.1em 0.3em;
+  background: var(--code-bg);
+  border-radius: 3px;
+  font-family: "Sarasa Mono SC", ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+pre {
+  padding: 1em;
+  overflow-x: auto;
+  text-align: left;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.85em;
+}
+
+/* 404 */
+.post-404 {
+  text-align: center;
+}
+
+/* 窄屏适配 */
+@media (max-width: 40em) {
+  body {
+    padding: 1rem 0.9rem;
+    font-size: 16px;
+  }
+
+  .menu {
+    gap: 0.4rem;
+  }
+
+  .article-meta .title {
+    font-size: 1.3em;
+  }
+
+  pre {
+    padding: 0.75em;
+  }
+}
+
