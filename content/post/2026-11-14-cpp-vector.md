@@ -15,11 +15,11 @@ summary: "以标准条款与三家实现源码为证据，拆解 std::vector 的
 
 容量与失效是同一条链上的两环：`capacity()` 是已分配存储能容纳的元素数，`size()` 是已构造元素数，两者之间是未构造的原始存储；`reserve` 只增加前者，`shrink_to_fit` 只是非约束请求。是否重分配由 `size()` 与 `capacity()` 的关系决定，与调用哪个函数无关：重分配使全部引用、指针、迭代器失效，不重分配时只有插入点及之后失效，`erase` 从擦除点开始失效。阅读或编写 `vector` 代码时，先回答这个问题，失效范围与成本随之确定。
 
-异常保证的分界由元素类型决定。元素可拷贝，或移动构造 `noexcept`，尾部插入在扩容失败后才能回滚到原状；只可移动且移动可能抛的类型落在标准少见的「效果未指定」角落，因为旧存储已被破坏，没有通用的恢复办法。让移动构造与移动赋值保持 `noexcept`，是同时改善扩容与 `erase` 行为成本最低的一步。
+异常保证的分界由元素类型决定。元素可拷贝，或移动构造 `noexcept`，尾部插入在扩容失败后才能回滚到原状；只可移动且移动可能抛的类型落在标准少见的「效果未指定」情形，因为旧存储已被破坏，没有通用的恢复办法。让移动构造与移动赋值保持 `noexcept`，是同时改善扩容与 `erase` 行为成本最低的一步。
 
 几何增长是摊销 O(1) 的必要条件：容量按因子 c 增长时，总搬迁次数约为 `c / (c - 1) * n`，因子 2 约 2n，因子 1.5 约 3n，固定增量则退化为 O(n²)。标准只规定复杂度，因子由实现选择：libstdc++ 与 libc++ 用 2 倍，MSVC 用 1.5 倍。因子小于 2 时，此前释放的块有机会被后续请求复用；等于 2 时释放块的总和永远小于下一次请求。1.5 的代价是更多次重分配与搬迁，2 倍的代价是更高的峰值内存。容量序列与 `shrink_to_fit` 的实际效果因此不可移植。
 
-实现层的结构三家一致：三个指针、通过 `allocator_traits` 分配与构造、异常时用守卫回滚、重分配时先构造新元素再搬迁旧元素。差异集中在 ABI 布局、是否使用 `allocate_at_least`、`shrink_to_fit` 的精确性、`vector<bool>` 的位宽，以及调试与加固机制。这些都是工程取舍，标准层面的语义一致。
+实现层的结构三家一致：三个指针、通过 `allocator_traits` 分配与构造、异常时用守卫回滚、重分配时先构造新元素再搬迁旧元素。差异集中在 ABI 布局、是否使用 `allocate_at_least`、`shrink_to_fit` 的精确性、`vector<bool>` 的字宽，以及调试与加固机制。这些都是工程取舍，标准层面的语义一致。
 
 实际使用可以收敛成三条规则：
 
@@ -135,7 +135,7 @@ summary: "以标准条款与三家实现源码为证据，拆解 std::vector 的
 - 尾部插入单元素时，若 `T` 是 `Cpp17CopyInsertable` 或 `is_nothrow_move_constructible_v<T>` 为真，无效果。
 - 否则，若移动构造抛出且 `T` 不可拷贝，效果未指定。
 
-最后一句是 `vector` 主要的未指定角落。它对应的类型是「只可移动、移动可能抛」：拷贝被删除，`move_if_noexcept` 没有退路，实现只能移动；移动失败时新存储里已构造了一部分元素，旧存储的状态已不可恢复，标准因此不给保证。规避方式是让移动构造 `noexcept`，或者用 `reserve` 把扩容挪到不容易失败的位置。
+最后一句是 `vector` 主要的未指定情形。它对应的类型是「只可移动、移动可能抛」：拷贝被删除，`move_if_noexcept` 没有退路，实现只能移动；移动失败时新存储里已构造了一部分元素，旧存储的状态已不可恢复，标准因此不给保证。规避方式是让移动构造 `noexcept`，或者用 `reserve` 把扩容挪到不容易失败的位置。
 
 `reserve` 与 `shrink_to_fit` 的保证带同一个限定：由非 `Cpp17CopyInsertable` 类型的移动构造抛出的异常，不保证无效果（[draft][vector.capacity]/4、/9）。原因是重分配必须搬迁旧元素，搬迁失败时没有通用的安全回滚办法。
 
@@ -293,9 +293,9 @@ MSVC STL 团队在公开讲座里把 1.5 到 2 之间的因子描述为速度与
 
 ## 5. 实现
 
-### 5.1 最小骨架
+### 5.1 简化实现
 
-去掉接口细节之后，`vector` 的实现只需要三个指针、一个分配器与两个循环。下面是一个可读的骨架，略去头文件与全部 ABI 细节：
+去掉接口细节之后，`vector` 的实现只需要三个指针、一个分配器与两个循环。下面是一个可读的简化实现，略去头文件与全部 ABI 细节：
 
 ```cpp
 template<class T, class A = std::allocator<T>>
@@ -363,9 +363,9 @@ private:
 };
 ```
 
-骨架只保留主路径：容量检查、末尾构造、重分配、析构与归还。拷贝构造、移动构造、移动赋值、`insert`/`erase`、分配器传播、常量求值与调试钩子都在后文展开，它们不改变上面的结构。
+这个简化实现只保留主路径：容量检查、末尾构造、重分配、析构与归还。拷贝构造、移动构造、移动赋值、`insert`/`erase`、分配器传播、常量求值与调试钩子都在后文展开，它们不改变上面的结构。
 
-为了突出重分配路径，骨架把新元素的构造放在提交之后；真实实现把新元素构造纳入同一个守卫，并按第 5.4 节的顺序先构造新元素、再搬迁旧元素。
+为了突出重分配路径，简化实现把新元素的构造放在提交之后；真实实现把新元素构造纳入同一个守卫，并按第 5.4 节的顺序先构造新元素、再搬迁旧元素。
 
 三个指针的表示让 `size()` 退化为一次相减，让「是否还有剩余容量」退化为 `end_ != cap_`；分配器通过 `allocator_traits` 访问，元素构造与析构不直接调用 `new`/`delete`。这两点是实现的主干。
 
@@ -381,7 +381,7 @@ private:
 
 MSVC 用 `_Buy_raw` 分配、`_Change_array` 接管存储（`stl/inc/vector:2027`、`2061`），元素构造走 `_Alty_traits::construct`。libc++ 的 `__vallocate` 调用 `__allocate_at_least` 并写入布局（`__vector/vector.h:672`、`__vector/layout.h:377`）。
 
-`deallocate` 需要容量计数，这也是三指针表示的一个附带理由：容量始终可以从「容量末尾减起始」得到，不需要额外记录。析构路径通常还有快速分支：`T` 可平凡析构时跳过逐元素 `destroy`，直接归还存储。
+`deallocate` 需要容量计数，这也是三个指针表示的一个附带理由：容量始终可以从「容量末尾减起始」得到，不需要额外记录。析构路径通常还有快速分支：`T` 可平凡析构时跳过逐元素 `destroy`，直接归还存储。
 
 ### 5.3 尾部插入的两条路径
 
@@ -447,11 +447,11 @@ libstdc++ 的判定是 `__is_trivial`（`bits/stl_uninitialized.h:1346`），`in
 
 移动赋值的分支更多：`propagate_on_container_move_assignment` 为真、`is_always_equal` 为真或两个分配器相等时，直接窃取缓冲区（libstdc++ 的 `_M_move_assign(true_type)`，`bits/stl_vector.h:2255`–`2261`；MSVC 在 `operator=` 里按 traits 分支，`stl/inc/vector:801`–`828`）；否则只能逐元素移动，再把源清空（libstdc++ `bits/stl_vector.h:2267`–`2279`）。
 
-`swap` 交换三指针，分配器按 `propagate_on_container_swap` 决定是否一起交换；`noexcept` 条件由 `propagate_on_container_swap` 与 `is_always_equal` 的析取给出。libstdc++ 的 `_M_swap_data`（`bits/stl_vector.h:128`）、MSVC 的 `_Swap_val`（`stl/inc/vector:419`）与 libc++ 布局的 `__swap`（`__vector/layout.h:397`）都只交换三个字段，不搬迁元素。
+`swap` 交换三个指针，分配器按 `propagate_on_container_swap` 决定是否一起交换；`noexcept` 条件由 `propagate_on_container_swap` 与 `is_always_equal` 的析取给出。libstdc++ 的 `_M_swap_data`（`bits/stl_vector.h:128`）、MSVC 的 `_Swap_val`（`stl/inc/vector:419`）与 libc++ 布局的 `__swap`（`__vector/layout.h:397`）都只交换三个字段，不搬迁元素。
 
 析构函数销毁全部元素，再按容量归还存储。这三组特殊成员解释了为什么 `vector` 的移动通常是常数时间，而跨分配器的移动赋值会退化为线性时间。
 
-### 5.10 回滚守卫
+### 5.10 守卫对象与异常回滚
 
 重分配与插入都要在异常时回到可用的状态。实现的做法统一为「把已构造区间与新存储记在守卫对象里」，异常传播时守卫的析构函数销毁已构造元素并归还存储。
 
@@ -461,7 +461,7 @@ MSVC 用 `_Reallocation_guard2`（`stl/inc/vector:628`–`644`），它保存分
 
 libc++ 把暂存缓冲区本身做成 RAII 类型 `__split_buffer`：新元素与搬迁都在其中完成，析构时销毁已构造区间并归还内存；构造函数路径另外用 `__destroy_vector` 守卫处理元素构造失败。
 
-守卫的形状解释了第 6 章的结论：能回滚的前提是旧存储仍然完整。拷贝失败时旧元素未动，守卫只需清理新块；移动失败时旧元素可能已被改动，守卫无法恢复，异常保证因此降级。
+守卫的结构解释了第 6 章的结论：能回滚的前提是旧存储仍然完整。拷贝失败时旧元素未动，守卫只需清理新块；移动失败时旧元素可能已被改动，守卫无法恢复，异常保证因此降级。
 
 ### 5.11 constexpr 与编译器协作
 
@@ -475,11 +475,11 @@ C++20 起 `vector` 可以在常量求值中使用（P1004R2、P0784R7）。实�
 
 | 维度 | libstdc++ 16.2 | MSVC STL 145 | libc++ main |
 | --- | --- | --- | --- |
-| 布局 | 三指针 | 三指针，调试时加代理指针 | 三指针，可选尺寸布局 |
+| 布局 | 三个指针 | 三个指针，调试时加代理指针 | 三个指针，可选尺寸布局 |
 | 增长 | `size + max(size, n)`，2 倍 | `cap + cap / 2`，1.5 倍 | `max(new, 2 * cap)`，2 倍 |
-| 分配精度 | 精确 n | `allocate_at_least` | `allocate_at_least` |
+| 分配大小 | 精确 n | `allocate_at_least` | `allocate_at_least` |
 | 重分配搬迁 | relocate 或 `move_if_noexcept` | `move_if_noexcept` 分支 | `__split_buffer` 加 relocation |
-| 回滚守卫 | `_Guard_alloc`、`_Guard_elts` | `_Reallocation_guard2` | `__split_buffer`、`__destroy_vector` |
+| 守卫对象 | `_Guard_alloc`、`_Guard_elts` | `_Reallocation_guard2` | `__split_buffer`、`__destroy_vector` |
 | `shrink_to_fit` | 条件收缩，不抛 | 精确收缩，可抛 | `noexcept`，容量可能仍大于 `size()` |
 | `vector<bool>` 字宽 | `unsigned long` | `unsigned int` | `size_type` |
 
@@ -561,7 +561,7 @@ libstdc++ 的 `__shrink_to_fit_aux` 只在元素可拷贝或移动 `noexcept` �
 
 标准只保证 `capacity() >= size()`，以及 `reserve(n)` 之后 `capacity() >= n`，不保证相等。C++23 的 `allocate_at_least` 允许分配器返回更大的块，实现可以把实际大小记为容量，容量因此可能超过请求值。
 
-`vector<bool>` 的容量以位计，向上取整到位存储单位的整数倍，`reserve(n)` 之后 `capacity()` 可能大于 n。依赖逻辑不应写到 `capacity()` 的精确值上。
+`vector<bool>` 的容量以位计，向上取整到存储单元的整数倍，`reserve(n)` 之后 `capacity()` 可能大于 n。依赖逻辑不应写到 `capacity()` 的精确值上。
 
 ### 7.4 reserve 不适用的场景
 
@@ -596,7 +596,7 @@ libstdc++ 的 `__shrink_to_fit_aux` 只在元素可拷贝或移动 `noexcept` �
 
 位存储的单位是一台机器字。libstdc++ 用 `_Bit_type`，定义为 `unsigned long`（`bits/stl_bvector.h:72`）；MSVC 用 `unsigned int`，固定 32 位（`stl/inc/vector:2264`）；libc++ 用 `size_type`（`__vector/vector_bool.h:88`）。
 
-容量粒度由位存储单位的宽度决定。libstdc++ 的 `_Bit_type` 是 `unsigned long`：Windows/LLP64 上为 4 字节，容量按 32 位取整；LP64 平台上为 8 字节，按 64 位取整。MSVC 固定为 32 位，libc++ 按 `size_type` 的宽度（通常 64 位）取整。
+容量粒度由存储单元的宽度决定。libstdc++ 的 `_Bit_type` 是 `unsigned long`：Windows/LLP64 上为 4 字节，容量按 32 位取整；LP64 平台上为 8 字节，按 64 位取整。MSVC 固定为 32 位，libc++ 按 `size_type` 的宽度（通常 64 位）取整。
 
 空间上，`vector<bool>` 每个元素占一位，`vector<char>` 与 `bool[N]` 每个元素占一字节，理论压缩比为 8 倍。代价是每次读写都要做位运算与读改写，`vector<char>` 的单元素访问更便宜。
 
