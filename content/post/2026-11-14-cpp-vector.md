@@ -265,7 +265,7 @@ Folly 的 `FBVector` 文档（<https://github.com/facebook/folly/blob/main/folly
 
 容量浪费：因子越大，`size()` 与 `capacity()` 的差距可能越大。对内存敏感的场景，这个差距比搬迁成本更重要。
 
-### 4.4 MSVC 的 1.5 从哪里来
+### 4.4 MSVC 的 1.5：来源与取舍
 
 MSVC 的增长公式是 `capacity() + capacity() / 2`，源码注释只写 geometric growth，没有给出选择理由（`stl/inc/vector:2009`–`2025`）；公开文档里也找不到微软的书面说明。可以核实的是这个因子在机制上的后果。
 
