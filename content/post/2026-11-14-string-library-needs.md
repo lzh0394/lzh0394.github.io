@@ -13,12 +13,12 @@ summary: "从标准与提案、三家实现、行业实践三条证据线，梳�
 ## 0. 结论摘要
 
 1. 「字符串库」不是一条需求，而是六层可分离的需求：字节与码元存储（owning）、借用视图（borrowing）、文本语义（编码与 Unicode）、格式化与解析、互操作边界（C 接口、NUL、跨语言）、编译期能力。把六层压进一个类型，是所有争议的共同根源。
-2. 需求的第一分界线是生命周期与所有权，第二分界线是编码契约。性能预算、异常模型、ABI 承诺、分配器可用性属于「硬约束」，它们决定类型布局，而不是偏好。
+2. 需求的第一分界线是生命周期与所有权，第二分界线是编码约定。性能预算、异常模型、ABI 承诺、分配器可用性属于「硬约束」，它们决定类型布局，而不是偏好。
 3. 标准库的 `basic_string` 被三条不变式钉死：连续容器、末尾空终止符、allocator-aware 但不使用 allocator 的 `construct`/`destroy`。这三条使 rope/分片表示在标准层不可行，也使「改进 `std::string` 布局」与「ABI 稳定」不可兼得。
 4. 标准委员会的实际策略是「最小公分母 + 增量类型」：不重构 `basic_string`，而是陆续添加 `string_view`（C++17）、`resize_and_overwrite`（C++23）、`text_encoding`（C++26），并在 2025—2026 年推进 `cstring_view`（P3655）与 UTF 转码视图（P2728、P4246）。Unicode 算法（归一化、排序、分词）仍留在 ICU 一类外部库。
 5. 十类使用者的需求差异主要体现在硬约束上：游戏引擎要自定义分配器与无异常；嵌入式要无堆、静态容量、可预测；HFT 与数据管道要热路径零分配与 locale 无关解析；桌面/GUI 要完整 Unicode 与 UTF-16 平台互操作；安全敏感场景要边界检查、生命周期诊断与敏感数据擦除；跨语言边界要保证 NUL 终止的视图。
 6. 最主要的未满足需求：保证式预留与非初始化写入、保证 NUL 终止的视图（推进中）、标准转码（提案中）、字素/分词级文本视图、rope、透明异构查找、checked view、运行时格式串的安全检查。
-7. 对库设计者的核心建议：参数用借用视图、返回值用拥有类型；转换的隐式性由代价决定；编码契约写进类型或文档；格式化同时提供编译期检查与运行时入口；安全检查分级且不改 ABI；新类型必须与旧类型零成本互转。
+7. 对库设计者的核心建议：参数用借用视图、返回值用拥有类型；转换的隐式性由代价决定；编码约定写进类型或文档；格式化同时提供编译期检查与运行时入口；安全检查分级且不改 ABI；新类型必须与旧类型零成本互转。
 8. 对标准演进的判断：`cstring_view` 与 UTF 转码是最可能先落地的两块；完整 Unicode 文本类型在可预见的周期内不会进入标准，因为 Unicode 数据每年更新，而标准库行为兼容期以十年计。
 
 ---
@@ -65,7 +65,7 @@ summary: "从标准与提案、三家实现、行业实践三条证据线，梳�
 | owning / 拥有型 | 自己管理字符存储的生命周期，如 `std::string`、`absl::Cord`、`SmallString<N>` |
 | borrowing / 借用型 | 只引用他人存储，如 `string_view`、`StringRef`、`span<char>` |
 | 空终止 / NUL 终止 | 数据在 `size()` 位置之后还有一个 `charT()`，可直接传给 C 接口 |
-| 编码契约 | 类型或文档层面对「这些字节是什么编码」的承诺，如 Qt 的 UTF-16、Rust 的 UTF-8 不变量 |
+| 编码约定 | 类型或文档层面对「这些字节是什么编码」的承诺，如 Qt 的 UTF-16、Rust 的 UTF-8 不变量 |
 | 热路径 | 对延迟或吞吐敏感、不允许不可预测分配与系统调用的代码段 |
 
 ---
@@ -121,7 +121,7 @@ summary: "从标准与提案、三家实现、行业实践三条证据线，梳�
 |---|---|---|---|
 | L0 存储 | 连续、可增长、分配策略 | SSO 阈值、分配器传播、ABI | `std::string`、`pmr::string`、`SmallString<N>` |
 | L1 视图 | 非拥有、O(1) 切片、按值传递 | 生命周期、无 NUL 终止、无边界检查 | `string_view`、`StringRef`、`span<char>`、`cstring_view`（提案） |
-| L2 文本 | 编码契约、码点/字素迭代、Unicode 算法 | 编码不变量、数据版本、体积 | Qt `QString`、Rust `String`、ICU、ICU4X |
+| L2 文本 | 编码约定、码点/字素迭代、Unicode 算法 | 编码不变量、数据版本、体积 | Qt `QString`、Rust `String`、ICU、ICU4X |
 | L3 格式化与解析 | 类型安全、编译期检查、数值转换 | 运行时格式串、locale、i18n | `std::format`、`std::print`、`fmt`、`to_chars`/`from_chars` |
 | L4 互操作 | C ABI、NUL 终止、UTF-16/UTF-8 边界 | 平台 API、跨语言、嵌入 NUL | `c_str()`、`cstring_view`（提案）、平台转换 API |
 | L5 编译期 | `constexpr`/`consteval`、静态诊断 | 编译期分配、运行期输入 | `constexpr string`、`consteval basic_format_string` |
@@ -138,7 +138,7 @@ summary: "从标准与提案、三家实现、行业实践三条证据线，梳�
 
 1. 连续容器：`[data(), data() + size())` 是合法区间，且 `data() + size()` 指向 `charT()`（空终止符），改写该终止符是未定义行为 [draft]（[basic.string.general](https://eel.is/c++draft/basic.string.general)）。
 2. allocator-aware，但不用 allocator 的构造语义：标准明文说它「does not use the allocator's construct and destroy member functions」[draft]（[string.require](https://eel.is/c++draft/string.require)）。这是 string 与 vector 的第一处语义分叉。
-3. 容量不是契约：`reserve` 只在「发生重分配时」保证 `capacity() >= n`，`shrink_to_fit` 是「non-binding request」[draft]（[string.capacity](https://eel.is/c++draft/string.capacity)）。用户无法用标准接口表达「预留后不得再分配」。
+3. 容量不是承诺：`reserve` 只在「发生重分配时」保证 `capacity() >= n`，`shrink_to_fit` 是「non-binding request」[draft]（[string.capacity](https://eel.is/c++draft/string.capacity)）。用户无法用标准接口表达「预留后不得再分配」。
 
 这三条直接排除了 rope/分片表示：只要 `data()` 必须返回连续内存、且末尾必须有终止符，分块存储就不合法。这也解释了为什么 `std::rope` 从未进入标准，而 `absl::Cord`、SGI rope 只能作为独立类型存在 [推断]（草案中无 rope 设施，检索亦无相关提案命中）。
 
@@ -153,7 +153,7 @@ C++17 引入 `string_view` 的初衷是「非拥有、廉价、按值传递的�
 它留下了三个结构性缺口：
 
 - 不保证 NUL 终止：`data()` 不保证 `data()[size()]` 是空字符，而操作系统与 C 库接口大量要求 `const char*`。P3655 的开篇把后果写得很直接：开发者于是对需要 NUL 的地方传 `string_view` 再调 `data()`，「very bug-prone」[paper]（[P3655R6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p3655r6.html)）。
-- 下标契约比 `string` 更严：`string::operator[]` 允许 `pos <= size()`（可读终止符），`string_view::operator[]` 要求 `pos < size()`，标准专门加注说明这个不对称 [draft]（[string.view.access](https://eel.is/c++draft/string.view.access)）。因此视图无法继承 `string` 的 C 兼容性。
+- 下标规则比 `string` 更严：`string::operator[]` 允许 `pos <= size()`（可读终止符），`string_view::operator[]` 要求 `pos < size()`，标准专门加注说明这个不对称 [draft]（[string.view.access](https://eel.is/c++draft/string.view.access)）。因此视图无法继承 `string` 的 C 兼容性。
 - 隐式构造的边界难划：P1391/P1989 让任意连续字符区间隐式转成 `string_view`，随后 P2499 收紧为显式、LWG4102 记录了对既有代码的破坏 [paper]/[lwg]（[P2499R0](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2499r0.html)、[LWG4102](https://cplusplus.github.io/LWG/issue4102)）。P2516 的总结最锋利：「confuse representation with semantics using contiguity as a proxy for being a string」[paper]（[P2516R0](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2516r0.html)）。
 
 这段历史说明：语法上的「任何连续内存都是字符串」在重载解析层面会造成静默行为变化，标准最终选择了保守方向。
@@ -260,14 +260,14 @@ P3655R6（2026-10-18，目标 C++29）提议 `std::cstring_view`：非拥有、�
 - 硬约束：完整 Unicode（字素簇、大小写、排序、双向文本）；与平台 API 互操作（Win32/Qt 原生 UTF-16）；本地化数字/日期/货币；值语义；UI 线程响应。
 - 可牺牲项：纯 UTF-8 内部表示的简洁性、零分配、跨平台 ABI 一致。
 - 证据：Microsoft 文档说明 Windows 的 Unicode 字符串操作基本单位是 16 位字符 [doc]（[Windows data types for strings](https://learn.microsoft.com/en-us/windows/win32/Intl/windows-data-types-for-strings)）；Windows 自 1903 起可通过 manifest 设置进程级 UTF-8 code page，但 GDI 等子系统仍不能按进程切换 [doc]（[Use UTF-8 code page](https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page)）；Qt Wiki 说明 `QString` 用 UTF-16 的部分理由是与 Windows/macOS 原生 Unicode API 直接对接 [doc]（[Qt Wiki: QString](https://wiki.qt.io/QString)）；`QString::length()` 返回 QChar 数，含补充字符时不等于实际字符数 [doc]（同上）；字素、词、句边界由 UAX #29 定义 [doc]（[UAX #29](https://www.unicode.org/reports/tr29/)）；Qt 提供 `normalized()`，Godot 提供 `is_valid_unicode_identifier` 与 XID_Start/XID_Continue 区分 [doc]（[Godot String](https://docs.godotengine.org/en/stable/classes/class_string.html)）。
-- 设计含义：需要区分 code unit / code point / grapheme 三种索引语义，并在 API 命名或强类型上体现；编码边界类型化（如 `QAnyStringView` 的标签分派）；Unicode 数据与算法必须可外置、可裁剪；COW 值语义与 STL 迭代器契约、安全擦除存在冲突。
+- 设计含义：需要区分 code unit / code point / grapheme 三种索引语义，并在 API 命名或强类型上体现；编码边界类型化（如 `QAnyStringView` 的标签分派）；Unicode 数据与算法必须可外置、可裁剪；COW 值语义与 STL 迭代器协议、安全擦除存在冲突。
 
 ### 4.7 安全敏感场景
 
 - 场景：浏览器、操作系统组件、认证与加密、日志与审计、解析不可信输入。
 - 硬约束：不得悬垂、不得越界、不得注入、敏感数据可擦除、日志可脱敏。
 - 可牺牲项：极致性能、与既有 ABI 完全兼容、API 简洁性。
-- 证据：Herb Sutter 写道「it turns out to be easy to convert a `std::string` to a `string_view`，so that dangling is almost the default behavior」[talk]（[Sutter's Mill](https://herbsutter.com/2018/09/20/)）；P3471 把标准库中部分 UB 转为契约违约，并明确沿用 libc++ 的 hardening 实践 [paper]（[P3471](https://wg21.link/p3471)）；P1315 要求敏感数据擦除不被优化器删除，提供 `memset_explicit` 与函数模板 [paper]（[P1315R7](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1315r7.html)）；P3672 指出 Windows 路径 API 对嵌入 NUL 的处理是 CVE 来源，主张「actively not support embedded nulls」[paper]（[P3672R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3672r0.pdf)）；libc++ 四档 hardening 承诺不影响 ABI [impl]（[Hardening.md#L13](https://github.com/llvm/llvm-project/blob/main/libcxx/docs/Hardening.md#L13)）。
+- 证据：Herb Sutter 写道「it turns out to be easy to convert a `std::string` to a `string_view`，so that dangling is almost the default behavior」[talk]（[Sutter's Mill](https://herbsutter.com/2018/09/20/)）；P3471 把标准库中部分 UB 转为可诊断的前置条件违反，并明确沿用 libc++ 的 hardening 实践 [paper]（[P3471](https://wg21.link/p3471)）；P1315 要求敏感数据擦除不被优化器删除，提供 `memset_explicit` 与函数模板 [paper]（[P1315R7](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1315r7.html)）；P3672 指出 Windows 路径 API 对嵌入 NUL 的处理是 CVE 来源，主张「actively not support embedded nulls」[paper]（[P3672R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3672r0.pdf)）；libc++ 四档 hardening 承诺不影响 ABI [impl]（[Hardening.md#L13](https://github.com/llvm/llvm-project/blob/main/libcxx/docs/Hardening.md#L13)）。
 - 设计含义：安全需要三层配合：语言/库的注解（P2255 的 `reference_constructs_from_temporary`、LLVM 的 `LLVM_LIFETIME_BOUND`）、实现的 hardening（可选检查）、API 设计的 checked 变体与显式错误。标准目前只覆盖了前两层的一部分。另一个直接冲突：COW/引用计数字符串无法擦除「所有副本」，安全擦除需求要求库提供擦除钩子或禁止共享。
 
 ### 4.8 科学计算、数据处理与命令行工具
@@ -292,7 +292,7 @@ P3655R6（2026-10-18，目标 C++29）提议 `std::cstring_view`：非拥有、�
 - 硬约束：内存布局稳定；NUL 语义；明确的编码（UTF-8 或平台 UTF-16）；嵌入 NUL 的处理；错误码而非异常。
 - 可牺牲项：C++ 侧的便利性；统一编码（边界两侧常常不同）；跨边界类型安全。
 - 证据：Rust 的 `CString` 是「owned, C-compatible, nul-terminated string with no nul bytes in the middle」[doc]（[CString](https://doc.rust-lang.org/std/ffi/struct.CString.html)）；protobuf 的 string 字段必须是 UTF-8 或 7-bit ASCII、长度不超过 2^32，且采用长度前缀因而允许嵌入 NUL [doc]（[proto3](https://protobuf.dev/programming-guides/proto3/)）；cxx.rs 在 `std::string` 构造 `rust::String` 时对非 UTF-8 抛 `std::invalid_argument`，另提供 U+FFFD 替换的 lossy 版本 [impl]（[cxx string](https://cxx.rs/binding/string.html)）；Windows API 原生 UTF-16、Linux 约定 UTF-8 [paper]（[P3672R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3672r0.pdf)）；Qt 的 `QAnyStringView` 用编码标签 + 分派处理跨编码边界 [doc]（[QAnyStringView](https://doc.qt.io/qt-6/zh/qanystringview.html)）。
-- 设计含义：边界层需要「类型系统能表达的不变式」：是否 NUL 终止、是什么编码、是否允许嵌入 NUL。C ABI 的 NUL 终止契约与 protobuf 的长度前缀契约互相排斥，同一程序两种契约并存时必须用不同类型区分 [推断]。`string_view` 只表达「一段字符」，不足以承载这些信息，于是每个项目各自定义 `zstring_view`、`StringPiece`、`QAnyStringView`。
+- 设计含义：边界层需要「类型系统能表达的不变式」：是否 NUL 终止、是什么编码、是否允许嵌入 NUL。C ABI 的 NUL 终止约定与 protobuf 的长度前缀约定互相排斥，同一程序两种约定并存时必须用不同类型区分 [推断]。`string_view` 只表达「一段字符」，不足以承载这些信息，于是每个项目各自定义 `zstring_view`、`StringPiece`、`QAnyStringView`。
 
 ---
 
@@ -427,7 +427,7 @@ ETL 用固定容量与截断标志避免异常与堆 [doc]（[ETL strings](https
 
 折中：库的错误策略参数化（异常 / error_code / expected / 截断标志），成功路径零开销；不要把 `bad_alloc` 作为唯一失败通道。
 
-### 6.9 COW/共享 vs 安全擦除与 STL 契约
+### 6.9 COW/共享 vs 安全擦除与 STL 迭代器协议
 
 Qt 用隐式共享实现值语义，但文档自认迭代器行为与 STL 不同 [doc]（[implicit-sharing.html](https://doc.qt.io/qt-6/implicit-sharing.html)）。COW 还与安全擦除冲突：擦除一个副本不会擦除共享块，P1315 要求的「可靠擦除」在共享表示上无法实现 [paper]（[P1315R7](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1315r7.html)）。
 
@@ -543,8 +543,8 @@ Qt 用隐式共享实现值语义，但文档自认迭代器行为与 STL 不同
 
 1. 按边界分层：形参用借用视图（`string_view`/`StringRef`/`span<const char>`），返回值用拥有类型，跨模块边界用稳定布局的 (ptr,len) 或句柄。四家主流实现（Abseil、LLVM、Qt、Rust）在这一点上一致。
 2. 转换的隐式性由代价决定：零成本转换可隐式（string → view），有成本转换必须显式（view → string、编码转换）。这是 P0254 的原则性表述 [paper]。
-3. 编码契约写进类型或文档：要么像 Qt 一样固定 UTF-16、像 Rust 一样固定 UTF-8 不变量，要么在命名与文档里明确「这是字节序列」。模糊定位会把编码判断推给每个调用点。
-4. 不要给 `std::string` 加隐式共享：COW 与 STL 迭代器契约、线程语义、安全擦除冲突；共享诉求用独立类型（Cord）表达。
+3. 编码约定写进类型或文档：要么像 Qt 一样固定 UTF-16、像 Rust 一样固定 UTF-8 不变量，要么在命名与文档里明确「这是字节序列」。模糊定位会把编码判断推给每个调用点。
+4. 不要给 `std::string` 加隐式共享：COW 与 STL 迭代器协议、线程语义、安全擦除冲突；共享诉求用独立类型（Cord）表达。
 5. 容量语义要显式：区分「提示性预留」与「保证不重分配」，提供「借用缓冲写入」的入口（`resize_and_overwrite` 式回调或 `span` 输出参数）。
 6. SSO 与对象大小是 ABI 决策：要不同阈值就换类型（`SmallString<N>`）或另开 ABI 版本，不要指望运行期配置；文档要写明对象大小与阈值。
 7. 格式化两条腿：字面量格式串走编译期检查（`consteval`），运行时/翻译串走弱类型入口；同时提供写入调用方缓冲的 `format_to`。
@@ -585,15 +585,15 @@ Qt 用隐式共享实现值语义，但文档自认迭代器行为与 STL 不同
 - 安全敏感：hardening + checked 变体
 - 科学计算/CLI：from_chars/fast_float
 - 编译期/工具链：CTRE/反射
-- FFI/网络：CString/protobuf 契约
+- FFI/网络：CString/protobuf 约定
 
 ### 8.4 评审清单：设计或选型时问十个问题
 
 1. 形参是否统一为借用视图？返回值是否统一为拥有类型？
 2. 视图的生命周期约束是否写进类型、注解或文档？跨调用存储是否被禁止或显式拷贝？
 3. 是否区分「字节 / 码元 / 码点 / 字素」四种索引语义？
-4. 编码契约在哪里表达？边界转换是否显式且可失败？
-5. NUL 终止、嵌入 NUL、长度前缀三种契约是否用不同类型区分？
+4. 编码约定在哪里表达？边界转换是否显式且可失败？
+5. NUL 终止、嵌入 NUL、长度前缀三种约定是否用不同类型区分？
 6. 分配次数是否是接口的可观察属性？是否提供写入调用方缓冲的变体？
 7. 对象大小与 SSO 阈值是否作为 ABI 承诺管理？
 8. 错误策略是否可配置（异常/错误码/截断标志/lossy）？无异常构建是否可用？

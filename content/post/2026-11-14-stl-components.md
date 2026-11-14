@@ -136,7 +136,7 @@ L7–L12（文本、I/O、数值、并发、诊断与 C 兼容）：
 
 ### 3.1 L0 语言支持与运行时
 
-这一层不是「简单的头文件」，而是库与编译器/运行库的契约层。`<new>`、`<exception>`、`<typeinfo>`、`<initializer_list>`、`<coroutine>` 的声明可以写在头里，但 `operator new` 的实现、异常传播与捕获、RTTI 对象生成、`exception_ptr` 的引用计数都在运行库与编译器 ABI 中 [实现]。实现前必须定两件事：选哪套 C++ ABI（Itanium 或 MSVC），以及复用现成运行库（`libc++abi`、`libsupc++`、`vcruntime`）还是自研低层；只交付头文件得不到可用的 `<new>`/`<exception>`/`<typeinfo>` [推断]。
+这一层不是「简单的头文件」，而是库与编译器/运行库的协议层。`<new>`、`<exception>`、`<typeinfo>`、`<initializer_list>`、`<coroutine>` 的声明可以写在头里，但 `operator new` 的实现、异常传播与捕获、RTTI 对象生成、`exception_ptr` 的引用计数都在运行库与编译器 ABI 中 [实现]。实现前必须定两件事：选哪套 C++ ABI（Itanium 或 MSVC），以及复用现成运行库（`libc++abi`、`libsupc++`、`vcruntime`）还是自研低层；只交付头文件得不到可用的 `<new>`/`<exception>`/`<typeinfo>` [推断]。
 
 | 组件 | 标准头 | 关键实体 | 实现难点 | 优先级 |
 | --- | --- | --- | --- | --- |
@@ -245,7 +245,7 @@ L7–L12（文本、I/O、数值、并发、诊断与 C 兼容）：
 
 | 组件 | 标准头 | 实现难点 | 优先级 |
 | --- | --- | --- | --- |
-| 分配器协议 | `<memory>` | `allocator_traits` 默认行为；有状态分配器传播；`constexpr` 分配（C++20）；过度对齐；`allocate_at_least` 的返回值契约 | 最小可用 |
+| 分配器协议 | `<memory>` | `allocator_traits` 默认行为；有状态分配器传播；`constexpr` 分配（C++20）；过度对齐；`allocate_at_least` 的返回值要求 | 最小可用 |
 | 指针工具 | `<memory>` | fancy pointer 支持；`to_address`；`pointer_traits` 的 `element_type` 推导与 `rebind` 配合 | 最小可用 |
 | `unique_ptr` | `<memory>` | 空 deleter 的零开销（EBO）；数组特化；转换构造；`constexpr` 析构；指针大小等于裸指针 | 最小可用 |
 | 未初始化算法 | `<memory>` | 异常安全（销毁已构造前缀）；`constexpr`；ranges 版本；与 `construct_at` 的边界 | 最小可用 |
@@ -274,7 +274,7 @@ L7–L12（文本、I/O、数值、并发、诊断与 C 兼容）：
 
 容器是使用频率最高的组件，但实现难点主要不在数据结构，而在标准要求的边缘行为：分配器传播、异常安全、迭代器失效、`constexpr`、节点句柄、pmr 别名、加固断言。先定共性骨架（类型别名、构造族、分配器接口），再填数据结构；骨架错了，后面每个容器都要改 [推断]。
 
-| 共性契约 | 标准要求 | 三家落点 [实现] |
+| 共性要求 | 标准要求 | 三家落点 [实现] |
 | --- | --- | --- |
 | 类型别名与 `get_allocator` | `value_type`、`allocator_type`、`size_type`、`difference_type`、`reference`、`const_reference`、`iterator`、`const_iterator` 必须齐全 | MSVC 用 `_Compressed_pair` 压缩空分配器；libstdc++ 以 `_Vector_base` 内嵌 `_Vector_impl`；libc++ 用 `__compressed_pair` |
 | 分配器传播 | 由三个 `propagate_on_container_*` 与 `select_on_container_copy_construction` 决定，默认均为 `false_type` | 三个 traits 定义在 `<memory>` 的 `allocator_traits` 中，由容器按 traits 分支 |
@@ -335,7 +335,7 @@ node handle 与分配器传播的交叉是本层最容易写错的部分 [标准
 
 ### 3.6 L5 迭代器与算法
 
-迭代器是泛型编程的契约中枢：容器产出迭代器，算法消费迭代器，`ranges` 再在其上抽象。先把迭代器协议定对，容器与算法才能独立演进。C++17 的 `iterator_category` 五分类与 C++20 的 `iterator_concept` 两套描述体系必须共存，不能二选一 [标准]。
+迭代器是泛型编程的协议中枢：容器产出迭代器，算法消费迭代器，`ranges` 再在其上抽象。先把迭代器协议定对，容器与算法才能独立演进。C++17 的 `iterator_category` 五分类与 C++20 的 `iterator_concept` 两套描述体系必须共存，不能二选一 [标准]。
 
 | 组件 | 标准头 | 实现要点与难点 | 优先级 |
 | --- | --- | --- | --- |
@@ -355,7 +355,7 @@ node handle 与分配器传播的交叉是本层最容易写错的部分 [标准
 - `iter_move`/`iter_swap` 是定制点对象：MSVC 在 `xutility:993-1066` 的 `_Iter_move` 命名空间内显式删除 `iter_move()` 以阻止无限定查找，libstdc++ 与 libc++ 同样把 ADL 与 CPO 查找隔离；代理引用下 `iter_move` 的右值语义与 `noexcept` 传播是易错点。
 - `basic_const_iterator`（C++23）把任意迭代器包成常量迭代器；MSVC 用 `conditional_t` 按需选择（`xutility:2358-2361`），对已是常量迭代器的类型不再重复包装；主要难点在它与 `common_reference`、`iter_move` 的交互。
 - 迭代器表示决定 `contiguous_iterator` 判定与 ABI：libstdc++ 用 `__normal_iterator`（`bits/stl_iterator.h:1026`），libc++ 用 `__wrap_iter`（`__iterator/wrap_iter.h`），MSVC 用 `_Vector_iterator`；Debug 模式再包一层（libstdc++ 的 `__gnu_debug::_Safe_iterator`）。
-- 迭代器契约冻结得太晚是全项目最大风险：`iterator_concept` 与 `iter_move`/`iter_swap` 一旦定错，容器、算法、`ranges` 三处同时返工 [推断]。
+- 迭代器协议冻结得太晚是全项目最大风险：`iterator_concept` 与 `iter_move`/`iter_swap` 一旦定错，容器、算法、`ranges` 三处同时返工 [推断]。
 
 算法层的难点不在单个函数，而在分派、编译期成本与并行后端 [实现]：
 

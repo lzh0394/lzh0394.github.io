@@ -87,7 +87,7 @@ summary: "从 C++98 的容器类型参数，到 C++11 的 allocator_traits、C++
 | C++11 | `allocator_traits`、传播 traits、`allocator_arg_t`、`uses_allocator`、`scoped_allocator_adaptor`、`pointer_traits` | N2525、N2554、N2982 | 最小分配器接口、有状态分配器可声明、嵌套容器可构造 | 分配器类型仍在容器类型里；传播规则复杂；历史成员仍在 |
 | C++17 | pmr、`memory_resource`、`polymorphic_allocator`、过度对齐 new、弃用历史成员、移除 `std::function` 分配器支持 | N3916、P0035R4、P0174R2、P0302R1、N4258 | 运行期选择分配策略、过度对齐类型、接口清理 | 资源生命周期、传播能力受限、类型擦除后不可查询 |
 | C++20 | 删除 `allocator<void>` 与冗余成员、constexpr 分配、`to_address`、uses-allocator 工具、`polymorphic_allocator<>` | P0619R4、P0784R7、P0653R2、P0591R4、P0339R6、P1165R1 | 编译期容器、最小接口、泛型工具 | 源兼容性破坏、constexpr 分配只能瞬时 |
-| C++23 | `allocate_at_least`、`allocation_result`、禁止特化 `allocator_traits`、容器推导指南修正、`pmr::stacktrace` | P0401R6、LWG 3887、P2652R2、P1518R2、P2301R1 | 减少重分配、封闭协议、修正过度约束、补齐 pmr 别名 | 容器采纳需要时间；deallocate 计数契约更细；GCC 对 P2652R2 的支持滞后 |
+| C++23 | `allocate_at_least`、`allocation_result`、禁止特化 `allocator_traits`、容器推导指南修正、`pmr::stacktrace` | P0401R6、LWG 3887、P2652R2、P1518R2、P2301R1 | 减少重分配、封闭协议、修正过度约束、补齐 pmr 别名 | 容器采纳需要时间；deallocate 计数要求更细；GCC 对 P2652R2 的支持滞后 |
 | C++26 | 移除 `allocator::is_always_equal`、撤回 `polymorphic_allocator::destroy` 弃用、operation state 与任务分配器 | P2868R3、P2875R4、P3433R1、P3503R3、P3980R1 | 修正派生分配器的错误默认、把分配器接进执行模型 | 部分提案实现尚未落地；P3433R1/P3980R1 的采纳归属仍需核实 |
 
 这张表的读法是：每一代只解决上一代最痛的一两个问题，同时把复杂度转移到别处。下一节开始按代展开。
@@ -401,9 +401,9 @@ P0401R6（2021-01-22，Jonathan Wakely、Chris Kennelly）把「大小反馈」�
 - `std::allocation_result<Pointer, SizeType>` 同时携带 `ptr` 与 `count`；
 - `Allocator::allocate_at_least(n)` 返回至少 `n` 个元素的分配结果；
 - `allocator_traits::allocate_at_least(a, n)` 在分配器没有该成员时回退为 `{a.allocate(n), n}`；
-- 契约：`result.count >= n`；释放时传给 `deallocate` 的大小 `m` 必须满足 `n <= m <= result.count`，请求值与实际值都在合法区间内。[标准 allocator.members][提案 P0401R6]
+- 约束：`result.count >= n`；释放时传给 `deallocate` 的大小 `m` 必须满足 `n <= m <= result.count`，请求值与实际值都在合法区间内。[标准 allocator.members][提案 P0401R6]
 
-最后一条契约是使用这个设施最容易出错的地方：`m` 小于请求的 `n` 或大于返回的 `count` 才违反契约；按请求值释放合法，按实际 `count` 释放也合法。容器若想把多出来的空间用起来，应把 `result.count` 记为 capacity。
+最后一条约束是使用这个设施最容易出错的地方：`m` 小于请求的 `n` 或大于返回的 `count` 才违反约束；按请求值释放合法，按实际 `count` 释放也合法。容器若想把多出来的空间用起来，应把 `result.count` 记为 capacity。
 
 这个设施的标准化过程本身也值得记录。P0401R1 时该接口在 `allocator_traits` 内（据 R1→R2 的修订说明反推）；LEWG 在科隆会议上指出，`allocator_traits` 允许用户特化，既有特化不会有这个新成员，于是 P0401R2 把它改成自由函数，C++23 草案（N4919）里因此出现了一个游离在 traits 之外的分配器接口。直到 P2652R2 禁止特化 `allocator_traits`，协议重新封闭，最终 C++23 才把它收回 traits 作为成员（同时保留 `std::allocator::allocate_at_least`）。这段历史是「协议可扩展性」与「接口一致性」冲突的典型案例。[提案 P0401R6、P2652R2]
 
@@ -433,7 +433,7 @@ C++26 的分配器变化以「修正上一轮收缩的边角」为主：
 | 提案 | 内容 | 动机 |
 | --- | --- | --- |
 | P2868R3 | 从 C++26 移除 `std::allocator<T>::is_always_equal` | 弃用来源是 LWG 3170（C++20）；删除理由见 P2868R3 §5：`std::allocator` 无状态，它的 `is_always_equal` 是 `true_type`；非空的用户分配器若继承 `std::allocator`，会连这个 `true_type` 一起继承，`allocator_traits` 于是把「有状态」的派生分配器当成永远相等，语义错误。移除后，派生分配器按默认规则由 `is_empty` 推导。[提案 P2868R3] |
-| P2875R4 | 撤回 `polymorphic_allocator::destroy` 的弃用 | C++23 的 LWG 3036 认为 `destroy` 与 traits 自动生成的行为重复，将其弃用；但非泛型的 pmr 代码直接调用 `destroy`，并不经过 `allocator_traits`。论文认为 `construct` 与 `destroy` 是一组成对契约，撤回弃用、留在主条款。[提案 P2875R4] |
+| P2875R4 | 撤回 `polymorphic_allocator::destroy` 的弃用 | C++23 的 LWG 3036 认为 `destroy` 与 traits 自动生成的行为重复，将其弃用；但非泛型的 pmr 代码直接调用 `destroy`，并不经过 `allocator_traits`。论文认为 `construct` 与 `destroy` 是一组成对操作，撤回弃用、留在主条款。[提案 P2875R4] |
 | P3433R1 | 为异步 operation state 提供分配器支持 | sender/receiver 的嵌套对象需要把外层 operation state 的分配器传进去；当前规范没有转发 `get_allocator()` 查询。论文把分配器语义接到 operation state。[提案 P3433R1] |
 | P3503R3 | 统一 `promise` 与 `packaged_task` 的类型擦除分配器用法 | LWG 2095/2921/2976/3003 的历史遗留：`uses_allocator` 特化与构造函数不一致；论文恢复 `packaged_task` 的分配器构造函数，并删除 `promise` 的 `uses_allocator` 特化。[提案 P3503R3] |
 | P3980R1 | 规定 `std::execution::task` 的分配器使用 | 协程帧与环境应使用哪个分配器、`allocator_arg` 的位置、从 receiver 环境取分配器等四个国家体意见。[提案 P3980R1] |
