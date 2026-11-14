@@ -7,6 +7,7 @@
 ## TODO
 
 - [ ] h4 统一称「小节」（h2「章」、h3「节」已统一；四篇暂无 h4 引用，随下次修改落实）
+- [ ] C++ 文章的 inline 不译为「内联」（「内联优化」除外；《C/C++ 编译模型》已改，其余八篇随下次修改落实）
 
 ## 项目概况
 
@@ -14,6 +15,7 @@
 - 部署在 GitHub Pages：<https://lzh0394.github.io/>
 - 远端：`https://github.com/lzh0394/lzh0394.github.io.git`，主分支 `main`
 - 内容全部是中文技术文章
+- 导航页：首页、关于、系列（`/series/`）、标签（`/tags/`）；分类页已移除
 - 站点配置在 `hugo.yaml`
 - 主题自建：模板在 `layouts/`，样式在 `static/css/`，不使用第三方主题或前端框架
 - 构建只依赖 Hugo 二进制
@@ -36,15 +38,19 @@
 - 不引入第三方主题或前端框架；主题改动只落在 `layouts/` 与 `static/css/`
 - 不手动修改 `public/`
 - 不引入评论/搜索/统计
-- 提交使用中文一句话简单描述提交内容
+- 提交使用中文一句话简单描述提交内容；每次修改后直接提交并 push，不需要等待确认
 
 ## 分类清单
 
-categories 从以下列表选择
+分类页已从站点移除，`categories` 字段暂时保留在 front matter，仍从以下列表选择
 
 - 编程语言
 - 计算机基础
 - 其他
+
+## 系列文章
+
+多篇成系列的文章在 front matter 写 `series`（系列名）与 `series_order`（篇序，从 1 开始），站点「系列」页按 `series_order` 列出同系列各篇（例如包管理器四篇）。
 
 ## 写文章步骤
 
@@ -60,7 +66,7 @@ categories 从以下列表选择
 - 将草稿从 `content/draft` 移动到 `content/post`
 - date 改为实际发布日期（通常为当天），文件名日期与 `date` 一致
 - 将 front matter 改为 `draft: false`
-- 补齐 `categories`/`tags`
+- 补齐 `categories`/`tags`，成系列的文章补 `series` 与 `series_order`
 - 构建验证
 
 ## front matter 格式
