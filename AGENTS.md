@@ -8,6 +8,7 @@
 
 - [ ] h4 统一称「小节」（h2「章」、h3「节」已统一；四篇暂无 h4 引用，随下次修改落实）
 - [ ] C++ 文章的 inline 不译为「内联」（「内联优化」除外；《C/C++ 编译模型》已改，其余八篇随下次修改落实）
+- [ ] 删除文章 front matter 里的 categories 字段
 
 ## 项目概况
 
@@ -26,7 +27,7 @@
 | 目的 | 命令 |
 | --- | --- |
 | 构建 | `./.tools/hugo/hugo.exe --minify` |
-| 本地预览（含草稿） | `./.tools/hugo/hugo.exe server -D` → <http://localhost:1313/> |
+| 本地预览 | `./.tools/hugo/hugo.exe server -D` → <http://localhost:1313/> |
 | 构建到临时目录验证 | `./.tools/hugo/hugo.exe --minify --destination tmp/build` |
 | Markdown 排版检查（提交前） | `npx --yes markdownlint-cli2@0.24.1` |
 
@@ -40,34 +41,14 @@
 - 不引入评论/搜索/统计
 - 提交使用中文一句话简单描述提交内容；每次修改后直接提交并 push，不需要等待确认
 
-## 分类清单
-
-分类页已从站点移除，`categories` 字段暂时保留在 front matter，仍从以下列表选择
-
-- 编程语言
-- 计算机基础
-- 其他
-
-## 系列文章
-
-多篇成系列的文章在 front matter 写 `series`（系列名）与 `series_order`（篇序，从 1 开始），站点「系列」页按 `series_order` 列出同系列各篇（例如包管理器四篇）。
-
 ## 写文章步骤
 
-- 新建草稿使用手写文件，不使用 `hugo new`
-- 草稿放 `content/draft/<slug>.md`，文件名不带日期，front matter 必须 `draft: true`
-- 草稿不排期：front matter 的 `date` 填创建日期，不写计划发布日期
-- 发布时才移到 `content/post/YYYY-MM-DD-slug.md`，将 front matter 改为 `draft: false`
-- 已发布文章路径：`content/post/YYYY-MM-DD-slug.md`；`slug` 与文件名中日期之后的部分一致。
+- 不写 draft，所有 post 一律 `draft: false`
+- 新建文章使用手写文件，不使用 `hugo new`
+- post 文件名为 `content/post/YYYY-MM-DD-slug.md`；`slug` 与文件名中日期之后的部分一致。
 - 永久链接规则：`/post/:year/:month/:day/:slug/`（改 `slug` 等于换 URL，已发布文章不要改）
-
-## 发布步骤
-
-- 将草稿从 `content/draft` 移动到 `content/post`
-- date 改为实际发布日期（通常为当天），文件名日期与 `date` 一致
-- 将 front matter 改为 `draft: false`
-- 补齐 `categories`/`tags`，成系列的文章补 `series` 与 `series_order`
-- 构建验证
+- 补齐 `tags`，成系列的文章补 `series` 与 `series_order`
+- 构建验证，并 push 到 origin
 
 ## front matter 格式
 
@@ -76,21 +57,22 @@
 title: "模运算 modulo"
 slug: "modulo"
 date: "2026-10-14"
-categories: ["计算机基础"]
 tags: ["数学", "取模", "整数运算", "C++"]
-draft: true
+draft: false
 summary: "一两句中文摘要，概括全文结论。"
 ---
 ```
 
-- categories 的数量控制在 1-2 之间，使用分类列表中的分类
 - tag 的数量控制在 1-4 之间
 - 字符串一律用双引号包围，注意是否有需要转义的字符，summary 里避免裸尖括号，或用行内代码包裹。
 - 列表统一使用行内数组
+- `draft: false`
+- 如果是系列文章，则添加 `series` 和 `series_order`
 
 ## 其他要求
 
-- 以下规则适用于全部文章。
+以下规则适用于全部文章。
+
 - 正文总体篇幅不限
 - 不声明由 AI 生成，默认整个博客内容都包含 AI 生成内容。
 - 标题编号使用数字格式
@@ -107,7 +89,7 @@ summary: "一两句中文摘要，概括全文结论。"
 - h2 之间插入分割线 `---`，开头不插入分割线。
 - 段落应当简短，不宜出现超长段落。
 - 适当使用有序列表和无序列表。
-- 控制表格的行数和列数，列数过多或者列过长的时候应当考虑调整。
+- 控制表格的行数和列数，列数过多或者列过长的时候应当调整。
   - 列数不大于 5
   - 行数不大于 10
 - 中英术语对照的频率视情况而定，默认写作 `中文（English）`。只对容易混淆的或者比较生僻的术语给出对照。
@@ -134,7 +116,6 @@ summary: "一两句中文摘要，概括全文结论。"
   - 命令
   - 字段名
   - 字面量
-- C++ 版本号应当写作 `C++11`，不写作 `C++ 11`
 - 有需要的情况下，可以在开头定下术语表
 - 不使用粗体（除去引用）
 - 不使用强调（除去引用）
@@ -143,6 +124,8 @@ summary: "一两句中文摘要，概括全文结论。"
 - C++ 相关
   - 引用草案应当标注条款锚点 + 段号
   - 引用提案写出 编号 + 修订号，例如 `P1234R5`
+  - C++ 版本号应当写作 `C++11`，不写作 `C++ 11`
+- 没有要求的情况下，不做本机实测
 
 ## 不合适的做法
 
