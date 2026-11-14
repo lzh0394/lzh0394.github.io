@@ -1,7 +1,7 @@
 ---
 title: "大版本分裂：当升级变成分家"
 slug: "major-version-splits"
-date: "2026-11-20"
+date: "2026-11-14"
 categories: ["其他"]
 tags: ["软件史", "版本演进", "兼容性", "Python"]
 draft: false
