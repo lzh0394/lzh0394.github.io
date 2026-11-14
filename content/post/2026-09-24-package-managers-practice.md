@@ -4,6 +4,8 @@ slug: "package-managers-practice"
 date: "2026-09-24"
 categories: ["其他"]
 tags: ["包管理器", "供应链", "工具链"]
+series: "包管理器"
+series_order: 4
 draft: false
 summary: "包管理器系列第四篇：应用分发层与工具链（Flatpak/Snap/AppImage、OCI 镜像、构建图、版本管理器、私有仓库）、供应链安全的威胁模型与防御，最后给出场景化选型与十二个常见陷阱。"
 ---

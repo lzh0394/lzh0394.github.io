@@ -1,8 +1,10 @@
 {{ define "main" }}
+{{ $pages := .Pages }}
+{{ if eq .Data.Plural "series" }}{{ $pages = $pages.ByParam "series_order" }}{{ end }}
 <h1>{{ .Title | markdownify }}</h1>
 {{ .Content }}
 <ul class="posts">
-  {{ range .Pages }}
+  {{ range $pages }}
   <li>
     <time class="date" datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2006/01/02" }}</time>
     <a href="{{ .RelPermalink }}">{{ .Title | markdownify }}</a>

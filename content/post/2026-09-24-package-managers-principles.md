@@ -4,6 +4,8 @@ slug: "package-managers-principles"
 date: "2026-09-24"
 categories: ["其他"]
 tags: ["包管理器", "依赖管理"]
+series: "包管理器"
+series_order: 1
 draft: false
 summary: "包管理器系列第一篇：把包管理器当成可分析的对象，先交代术语与约定，再梳理九项共性原理——替代了哪些手工劳动、包的形态、依赖求解、版本约束、锁文件、隔离、仓库与镜像、安装时执行代码、兼容性。"
 aliases: ["/post/2026/09/24/package-managers/"]

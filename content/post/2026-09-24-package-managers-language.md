@@ -4,6 +4,8 @@ slug: "package-managers-language"
 date: "2026-09-24"
 categories: ["其他"]
 tags: ["包管理器", "编程语言"]
+series: "包管理器"
+series_order: 3
 draft: false
 summary: "包管理器系列第三篇：按语言生态梳理语言级包管理器——npm 及其对手、Python 工具链、Cargo、Go modules、Maven/Gradle、NuGet、C/C++ 的空白、Bundler 与 Composer、其余生态速览，末节对比设计取舍。"
 ---

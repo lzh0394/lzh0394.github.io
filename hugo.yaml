@@ -12,6 +12,10 @@ footnotereturnlinkcontents: "↩"
 
 disableKinds: ["RSS"]
 
+taxonomies:
+  tag: tags
+  series: series
+
 menu:
   main:
     - name: 首页
@@ -20,8 +24,8 @@ menu:
     - name: 关于
       url: "about/"
       weight: 2
-    - name: 分类
-      url: "categories/"
+    - name: 系列
+      url: "series/"
       weight: 3
     - name: 标签
       url: "tags/"

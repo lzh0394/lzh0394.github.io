@@ -4,6 +4,8 @@ slug: "package-managers-os"
 date: "2026-09-24"
 categories: ["其他"]
 tags: ["包管理器", "Linux"]
+series: "包管理器"
+series_order: 2
 draft: false
 summary: "包管理器系列第二篇：逐个拆解系统级包管理器——dpkg/apt、rpm/dnf、pacman/AUR、apk、Portage、Homebrew、winget/Scoop/Chocolatey、Nix/Guix，末节做横向对比与共存策略。"
 ---
