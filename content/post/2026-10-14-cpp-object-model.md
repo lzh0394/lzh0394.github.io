@@ -98,7 +98,7 @@ C++20 起，`[intro.object]` 正式引入「隐式创建对象」：某些操作
 - C++23 起还有 `std::start_lifetime_as` 与 `std::start_lifetime_as_array`，这两个是显式索取，不是隐式触发。
 - 库侧的其他来源：`std::allocator<T>::allocate`、union 类型隐式定义的拷贝／移动特殊成员函数（见 `[obj.lifetime]`、`[mem.res.public]`、`[bit.cast]`、`[cstring.syn]` 的注）。
 
-另外两类「创建」不属于隐式创建那一节，但常被一起问：隐式改变 `union` 活跃成员时开始该成员的生命期（`[class.union]`），以及临时对象物化（`[conv.rval]`）。`[intro.object]`/1 把对象来源统一列为：定义、new 表达式、隐式创建对象的操作、隐式改变 union 活跃成员、创建临时对象。
+另外两类「创建」不属于隐式创建那一节，但常被一起问：隐式改变 `union` 活跃成员时开始该成员的生命期（`[class.union]`），以及从纯右值创建临时对象（`[conv.rval]`/1 所称的 temporary materialization conversion）。`[intro.object]`/1 把对象来源统一列为：定义、new 表达式、隐式创建对象的操作、隐式改变 union 活跃成员、创建临时对象。
 
 #### 8.1.2 两个容易记错的点
 
