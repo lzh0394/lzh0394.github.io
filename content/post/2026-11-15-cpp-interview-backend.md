@@ -2189,7 +2189,7 @@ ORDER BY t.created_at DESC;
 - 覆盖索引包含 `WHERE` 与 `ORDER BY` 所需列时，可以避免回表并减少排序。
 - 游标分页不支持随机跳页，前端交互需要相应调整。
 
-### 11.11 如何用 `EXPLAIN` 判断一条 SQL 走了全表扫描？
+### 11.11 一条 SQL 走了全表扫描，如何确认并改写？
 
 - `type` 为 `ALL` 表示全表扫描，`index` 表示全索引扫描，两者都按顺序读取大量行。
 - `key` 为 `NULL` 表示没有使用索引，`possible_keys` 列出候选索引，可用于判断是否缺少索引。
@@ -2197,41 +2197,34 @@ ORDER BY t.created_at DESC;
 - `Extra` 中出现 `Using where` 且 `type` 为 `ALL`，通常是过滤条件没有可用索引。
 - `EXPLAIN FORMAT=JSON` 输出 `cost_info` 与 `used_columns`，便于比较不同计划的代价。
 - 小表的全表扫描代价可能低于索引查找，`rows` 很小且没有排序时不必强行加索引。
+- 确认扫描量与过滤率后，优先补充索引或改写条件，再用 `EXPLAIN` 对比改写前后的计划。
 
-### 11.12 `EXPLAIN` 的 `type` 列取值如何排序？
+### 11.12 `UNION` 与 `UNION ALL` 如何选择？
 
-| `type` | 含义 | 典型场景 |
-| --- | --- | --- |
-| `system` | 表只有一行 | 系统表 |
-| `const` | 最多匹配一行 | 主键等值查询 |
-| `eq_ref` | 每次匹配一行 | 主键关联 |
-| `ref` | 非唯一索引等值 | 普通索引查询 |
-| `range` | 索引范围扫描 | `BETWEEN`、`IN` |
-| `index` | 全索引扫描 | 覆盖索引但无过滤 |
-| `ALL` | 全表扫描 | 无可用索引 |
+- `UNION` 对合并结果去重，需要借助临时表或排序，`UNION ALL` 直接拼接并保留全部行。
+- 已知各分支结果不重叠时用 `UNION ALL`，可以避免去重开销。
+- 需要去重时先在各分支用 `WHERE` 缩小结果集，再合并，减少参与去重的行数。
+- 合并结果的列名取自第一个分支，列数与类型按位置对齐，类型不一致时发生隐式转换。
+- 需要对合并结果再做过滤或连接时，把 `UNION` 包进派生表；全局排序与分页可以直接写在 `UNION` 末尾。
+- 混合使用 `UNION` 与 `UNION ALL` 时，去重范围由语句结构决定，建议用括号明确每个分支。
 
-- 顺序表示访问代价的大致高低，实际代价还受行数、回表与索引长度影响。
-- `index_merge`、`unique_subquery` 与 `index_subquery` 属于特殊访问方式，不能简单按上述顺序比较。
-- `range` 之后的类型在数据量大时都需要重点检查，`ALL` 通常意味着缺少可用索引。
-- `type` 只是计划的一部分，需要结合 `rows`、`filtered` 与 `Extra` 一起判断。
+### 11.13 `OR` 条件如何改写为 `UNION ALL`？
 
-### 11.13 `EXPLAIN` 的 `Extra` 列常见值分别意味着什么？
+- `OR` 连接不同列时，优化器可能无法为每个分支选择索引，退化为全表扫描。
+- 改写为两个走索引的查询再拼接，可以让每个分支分别利用索引。
+- 分支结果可能重复时用 `UNION` 去重，确定不重叠时用 `UNION ALL`。
+- 每个分支都要补上公共过滤条件，否则结果集与原子查询的语义不一致。
+- `OR` 连接同一列的范围条件时，可以直接写成 `IN` 或 `BETWEEN`，通常不需要改写。
+- 改写会增加语句长度与解析成本，分支数量多时需要评估可维护性。
 
-- `Using index` 表示覆盖索引，查询列全部来自索引，不需要回表。
-- `Using where` 表示存储引擎返回行后由服务器层过滤，索引没有完全覆盖过滤条件。
-- `Using filesort` 表示需要额外排序，排序数据超过 `sort_buffer_size` 时使用磁盘临时文件。
-- `Using temporary` 表示使用临时表，常见于 `GROUP BY`、`DISTINCT` 与 `UNION` 的去重。
-- `Using join buffer` 表示被驱动表缺少索引，使用连接缓冲批量匹配。
-- `Using index condition` 表示索引条件下推，在存储引擎层用索引列过滤，减少回表。
+### 11.14 如何用 `EXPLAIN` 对比改写前后的执行计划？
 
-### 11.14 `EXPLAIN ANALYZE` 与 `EXPLAIN` 的区别是什么？
-
-- `EXPLAIN` 只输出优化器选择的计划与估算值，不执行 SQL。
-- `EXPLAIN ANALYZE` 实际执行 SQL，输出每个算子的实际行数、循环次数与耗时。
-- 估算行数与实际行数偏差大时，说明统计信息或条件估算不准，是计划选错的直接证据。
-- `EXPLAIN ANALYZE` 会真正执行语句，分析写操作时需要放进事务并回滚。
-- 输出为树形结构，`actual time` 分别给出首次返回与返回全部行的时间，单位为毫秒。
-- MySQL 8.0.18 起支持 `EXPLAIN ANALYZE`，更早的版本只能用 `EXPLAIN` 配合已废弃的 `SHOW PROFILE`。
+- 对比 `type`、`key`、`rows` 与 `Extra` 的变化，确认改写是否减少扫描、回表与排序。
+- 两次分析前都在相同数据量与统计信息下执行，避免统计差异干扰判断。
+- 用 `EXPLAIN FORMAT=JSON` 的 `cost_info` 比较代价，估算值只适合同环境横向对比。
+- 在测试环境用 `EXPLAIN ANALYZE` 对比实际行数与耗时，确认估算偏差没有掩盖问题。
+- 关注 `rows` 与实际行数的偏差，偏差大时先更新统计信息或直方图，再评估改写效果。
+- 改写后校验结果集与原 SQL 一致，避免用语义变化换取更优的计划。
 
 ### 11.15（配置）慢查询日志需要开启哪些参数？
 
@@ -2267,14 +2260,14 @@ SET GLOBAL log_queries_not_using_indexes = OFF;
 - MySQL 8.0 支持列直方图，`ANALYZE TABLE ... UPDATE HISTOGRAM` 生成，结果可从 `information_schema.COLUMN_STATISTICS` 查询。
 - 自动更新由 `innodb_stats_auto_recalc` 控制，表变更比例不足阈值时不会触发。
 
-### 11.18（排查）`ORDER BY` 出现 `Using filesort` 时如何优化？
+### 11.18 多表 `UPDATE` 与 `DELETE` 如何安全改写？
 
-- 让排序键与过滤条件共用同一个索引，且索引列顺序满足最左前缀，可以按索引顺序直接返回。
-- `ORDER BY` 的列方向一致时才能利用索引，混合 `ASC` 与 `DESC` 需要 MySQL 8.0 的降序索引。
-- 排序键来自多表时，只有驱动表的列能利用索引顺序，被驱动表的排序仍需额外排序。
-- `sort_buffer_size` 过小会导致多次归并并落盘，适当增大可以减少磁盘临时文件，但按连接分配。
-- `LIMIT` 与 `ORDER BY` 组合时优先保证排序键有索引，避免先排序全部行再截断。
-- `max_length_for_sort_data` 在 MySQL 8.0.20 起废弃，排序模式由优化器自动选择。
+- 多表 `UPDATE` 写成 `UPDATE t1 JOIN t2 ON ... SET t1.col = ...`，连接条件与更新列都要明确。
+- 多表 `DELETE` 写成 `DELETE t1 FROM t1 JOIN t2 ON ...`，删除目标写在 `DELETE` 关键字之后。
+- 改写前用相同连接条件执行 `SELECT`，确认行数与目标行，避免误删或误更新。
+- 多表语句同样受锁与隔离级别影响，大事务应拆分为多批执行。
+- 子查询中更新同一张表会报错，需要用派生表包一层或改为 `JOIN`。
+- 执行前开启事务并确认影响行数，异常时回滚，避免直接在生产库试跑。
 
 ### 11.19（排查）一条 SQL 平时很快、偶发变慢，如何排查？
 
@@ -2286,21 +2279,14 @@ SET GLOBAL log_queries_not_using_indexes = OFF;
 - 长事务与大批量 DML 会持有锁并产生 undo 膨胀，变慢往往与写入高峰重合。
 - 用 `performance_schema` 的 `events_statements_history_long` 找回历史语句的耗时与扫描行数。
 
-### 11.20 大批量删除或更新如何避免长事务与锁等待？
+### 11.20（辨析）`INSERT ... ON DUPLICATE KEY UPDATE` 与 `REPLACE INTO` 如何取舍？
 
-- 分批执行，每批控制在几百到几千行，按主键范围推进，避免一次扫描全表。
-- 每批提交后短暂休眠，给复制与 purge 留出时间，降低主从延迟。
-- 删除条件走索引，避免全表扫描持有大量行锁；没有索引时 InnoDB 会对扫描到的所有行加锁，效果接近表锁。
-- 大事务会保留大量 undo，回滚时间长，`innodb_undo_log_truncate` 与 purge 线程需要时间回收。
-- 在业务低峰执行，并设置 `lock_wait_timeout` 与 `innodb_lock_wait_timeout`，避免无限等待。
-- 需要保留数据时改用归档表或分区交换，`DROP PARTITION` 比逐行删除快得多。
-
-```sql
-DELETE FROM orders
-WHERE created_at < '2025-01-01'
-ORDER BY id
-LIMIT 1000;
-```
+- `REPLACE INTO` 在唯一键冲突时先删除旧行再插入新行，未指定的列会恢复为默认值。
+- 删除再插入会触发删除触发器并维护二级索引，自增主键可能变化，外键引用会受影响。
+- `ON DUPLICATE KEY UPDATE` 执行更新，只修改指定列，保留其余列与原主键。
+- 冲突时 `ON DUPLICATE KEY UPDATE` 的受影响行数为 1 表示插入、2 表示更新、0 表示值未变化。
+- 批量写入时 `ON DUPLICATE KEY UPDATE` 仍可能产生间隙锁与死锁，需要按主键顺序写入。
+- 需要严格区分插入与更新逻辑时，先查询再分支，或用 `INSERT IGNORE` 跳过冲突，但该语句会忽略其他错误。
 
 ---
 
@@ -2438,15 +2424,14 @@ int shard_of(uint64_t user_id, int shard_count) {
 - 多主拓扑需要冲突解决策略，自增主键与唯一索引在双写时容易冲突。
 - 路由层需要感知主从角色变化，主库切换后及时更新拓扑，避免写入旧主。
 
-### 12.15 主从延迟的成因？
+### 12.15 延迟复制如何配置与使用？
 
-- 主库写入并发高，从库回放线程不足或并行复制粒度不够，回放速度跟不上。
-- 大事务与大批量 DML 在从库上串行执行，单个事务执行时间长，期间延迟持续累积。
-- 从库硬件弱于主库、磁盘 I/O 饱和或存在大查询争抢资源，回放速度下降。
-- 主库 `sync_binlog` 与半同步复制增加提交延迟，从库写 `relay log` 也受磁盘影响。
-- 无主键表的行更新在从库上需要全表扫描，回放效率明显下降。
-- 网络带宽不足导致 binlog 传输慢，`Seconds_Behind_Master` 的统计口径也会产生误导。
-- MySQL 8.0.22 起对应字段名为 `Seconds_Behind_Source`，监控脚本需要兼容两种命名。
+- `CHANGE REPLICATION SOURCE TO SOURCE_DELAY = 3600` 让从库滞后主库固定秒数，旧语法为 `MASTER_DELAY`。
+- 延迟复制用于误删表后的快速恢复，窗口内从库尚未执行故障事务。
+- 延迟期间从库的数据陈旧，不能承担在线读流量，通常只用于备份与恢复。
+- 延迟时间需要大于发现故障与切换的时间，常见设置为几分钟到几小时。
+- 恢复时先在延迟从库上 `STOP REPLICA`，导出对应表或跳过故障事务后再启动。
+- 延迟复制不能替代备份，DDL 与跨库操作仍需要完整的恢复流程。
 
 ### 12.16 如何避免读写分离读到旧数据？
 
@@ -2457,13 +2442,13 @@ int shard_of(uint64_t user_id, int shard_count) {
 - 业务层补偿：读到的数据带版本号，发现落后时重试或回源主库。
 - 监控复制延迟并按分位设置阈值，延迟超限时自动把读流量切回主库。
 
-### 12.17（配置）半同步复制与 `sync_binlog` 如何配置？
+### 12.17（配置）半同步复制如何配置与降级？
 
 - 半同步复制要求至少一个从库确认收到 binlog 后主库才返回提交成功，减少主库宕机丢数据。
 - 插件安装使用 `INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so'`，从库安装 `rpl_semi_sync_slave` 插件。
 - 主库开启 `rpl_semi_sync_master_enabled`，超时参数 `rpl_semi_sync_master_timeout` 到期后降级为异步复制。
-- `sync_binlog=1` 表示每次提交都把 binlog 刷盘，`sync_binlog=0` 由操作系统决定刷盘时机。
-- `sync_binlog=1` 与 `innodb_flush_log_at_trx_commit=1` 的组合增加写延迟，高并发下需要评估磁盘 IOPS 与业务可接受的提交延迟。
+- `rpl_semi_sync_master_wait_for_slave_count` 控制需要确认的从库数量，增加数量会提高提交延迟。
+- `rpl_semi_sync_master_wait_point` 决定等待点，`AFTER_SYNC` 在引擎提交前等待，`AFTER_COMMIT` 在提交后等待。
 - 半同步降级后主库不再等待从库，监控需要针对 `Rpl_semi_sync_master_status` 告警。
 - MySQL 8.0.26 起提供 `rpl_semi_sync_source_*` 命名与 `semisync_source.so` 库名，旧名称保留为别名。
 
@@ -2471,16 +2456,17 @@ int shard_of(uint64_t user_id, int shard_count) {
 INSTALL PLUGIN rpl_semi_sync_master SONAME 'semisync_master.so';
 SET GLOBAL rpl_semi_sync_master_enabled = ON;
 SET GLOBAL rpl_semi_sync_master_timeout = 1000;
+SET GLOBAL rpl_semi_sync_master_wait_for_slave_count = 1;
 ```
 
 ### 12.18 主从延迟如何监控与告警？
 
-- `SHOW REPLICA STATUS` 中的 `Seconds_Behind_Source` 反映回放落后时间，主库空闲时该值可能为 0 或 `NULL`。
-- `Relay_Log_Pos` 与 `Exec_Master_Log_Pos` 的差值反映尚未回放的 relay log 量。
+- `SHOW REPLICA STATUS` 的 `Seconds_Behind_Source` 适合粗粒度告警，主库空闲时可能为 0 或 `NULL`。
+- `pt-heartbeat` 提供秒级真实延迟，按分位统计 P95 与 P99，避免平均值掩盖尖峰。
+- `Relay_Log_Pos` 与 `Exec_Master_Log_Pos` 的差值反映未回放的 relay log 量，适合判断积压。
 - `performance_schema.replication_applier_status_by_worker` 可以查看每个 worker 的延迟与错误。
-- 使用 `pt-heartbeat` 写入时间戳心跳表，在从库读取并计算真实延迟，精度高于内置指标。
-- 告警按分位设置阈值，例如 P99 超过 1 秒持续 1 分钟，避免瞬时抖动误报。
-- 延迟指标需要与业务指标关联，读请求错误率上升时优先检查复制状态。
+- 告警阈值按业务容忍度设置，例如 P99 超过 1 秒持续 1 分钟，并区分在线读与备份流量。
+- 延迟指标与读请求错误率、主库写入 QPS 联动，异常时触发读流量切回主库。
 
 ### 12.19（排查）分片后出现热点分片如何排查？
 
@@ -2594,14 +2580,14 @@ SET GLOBAL rpl_semi_sync_master_timeout = 1000;
 - 大量键同时过期会造成周期性延迟抖动，过期时间应加随机偏移。
 - 内存回收依赖分配器，碎片率高时可以通过重启或 `MEMORY PURGE` 缓解。
 
-### 13.11 缓存穿透、击穿、雪崩的区分与处理？
+### 13.11 Redis 事务与 Lua 脚本如何保证原子性？
 
-- 穿透是查询不存在的数据，请求穿过缓存直达数据库，常见于恶意构造的 ID。
-- 击穿是热点键过期瞬间大量请求同时回源，缓存未命中但数据存在。
-- 雪崩是大量键在同一时间失效或缓存实例整体不可用，数据库瞬间承受全量流量。
-- 穿透用空值缓存、布隆过滤器与参数校验处理，空值缓存需要较短的过期时间。
-- 击穿用互斥重建、逻辑过期与热点永不过期处理，互斥锁要有超时与降级。
-- 雪崩用过期时间分散、多级缓存、限流与熔断处理，缓存集群做多副本与故障转移。
+- `MULTI` 与 `EXEC` 把命令排队后顺序执行，执行期间不会插入其他客户端的命令。
+- 事务中的命令逐条执行，某条命令在运行时失败不会回滚已执行的命令，Redis 事务不提供回滚。
+- `WATCH` 监视键，键在 `EXEC` 前被修改时事务放弃执行，客户端需要重试。
+- Lua 脚本在 Redis 中原子执行，脚本内的多条命令不会被其他请求打断。
+- 脚本应避免长时间循环与大量键操作，`lua-time-limit` 超时后 `SCRIPT KILL` 只能终止尚未写入的脚本，已写入时只能重启。
+- 集群模式下脚本访问的键必须在同一个槽位，需要用哈希标签固定槽位。
 
 ### 13.12（场景）热 key 如何发现与治理？
 
@@ -2690,14 +2676,14 @@ redis-cli --latency -h 127.0.0.1 -p 6379
 redis-cli SLOWLOG GET 10
 ```
 
-### 13.20 缓存命中率下降如何定位？
+### 13.20 Redis 内存碎片如何排查与治理？
 
-- 对比命中率曲线与发布、配置变更、流量突增的时间点，确认是否由变更引起。
-- 检查键的过期时间是否集中，批量过期会造成周期性命中率下跌。
-- 检查缓存容量与淘汰次数，`evicted_keys` 上升说明内存不足导致键被提前淘汰。
-- 检查键名或序列化格式是否变化，版本升级后新旧键不匹配会造成全量未命中。
-- 检查热点数据是否被拆分或迁移，集群扩容后槽位变化会影响局部命中率。
-- 统计各业务的命中率，避免全局指标掩盖单个业务的异常。
+- `INFO memory` 的 `mem_fragmentation_ratio` 是 `used_memory_rss` 与 `used_memory` 的比值，明显大于 1 说明碎片较多。
+- `MEMORY STATS` 与 `MEMORY DOCTOR` 提供分配器与碎片的分项信息。
+- 频繁增删与大小不一的值会造成碎片，过期键集中删除后尤其明显。
+- `activedefrag yes` 开启主动碎片整理，需要设置 `active-defrag-threshold-lower` 等阈值。
+- `MEMORY PURGE` 让分配器把空闲页归还操作系统，效果依赖分配器实现。
+- 碎片严重且无法整理时，主从切换或重启可以回收内存，操作前需要评估可用性。
 
 ---
 
@@ -2791,7 +2777,7 @@ chmod -R g+rX /srv/www   # X 只对目录与已有执行位的文件生效
 
 - 用 `df -h` 确认写满的文件系统，再用 `du -x -h --max-depth=1` 逐层定位。
 - 检查被删除但未释放的文件：`lsof +L1` 列出链接数为 0 的打开文件。
-- 重启持有该文件的进程，或通过 `/proc/PID/fd` 截断对应的描述符，空间才会释放。
+- 确认持有文件的进程后，再决定重启服务或截断描述符，空间才会释放。
 - 检查挂载点是否被覆盖，未挂载的目录中的数据会占用根文件系统空间。
 - 检查文件系统保留块比例，`tune2fs -m` 可以调整，`df` 的可用空间小于总量属于正常。
 - 检查 inode 使用情况，`df -i` 显示 inode 耗尽时即使有空间也无法创建文件。
@@ -2996,10 +2982,10 @@ lsof -p 12345 | grep -E 'REG|IPv4'
 ### 15.8 `lsof` 显示 deleted 文件如何处理？
 
 - 文件被删除后仍有进程持有文件描述符，`lsof` 的 `NAME` 列显示 `(deleted)`。
-- 该文件占用的磁盘空间不会释放，`df` 显示已用而 `du` 找不到对应文件。
-- 通过 `/proc/PID/fd` 找到对应的描述符，确认是日志、临时文件还是数据文件。
-- 日志文件可以通过向进程发送 `SIGUSR1` 或调用 `reopen` 重新打开，具体行为由程序决定。
-- 截断已删除文件可以用 `: > /proc/PID/fd/N`，操作前需要确认描述符编号与文件用途。
+- 用 `lsof -p PID | grep deleted` 定位进程与描述符编号，再用 `ls -l /proc/PID/fd` 确认。
+- 日志文件被删除后，进程继续写入旧 inode，新建的同名文件不会自动接管。
+- 需要保留日志时，向进程发送 `SIGUSR1` 或调用 `reopen`，由程序重新打开日志路径。
+- 需要立即释放空间时可以截断 `/proc/PID/fd/N`，但进程会继续向已截断的文件写入。
 - 无法重开文件时只能重启进程，重启前应评估业务影响与替代方案。
 
 ### 15.9 `strace` 如何定位系统调用阻塞？
