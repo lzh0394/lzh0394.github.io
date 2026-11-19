@@ -252,7 +252,7 @@ struct suspend_to_queue {
 
 ### 4.6 await_transform 的优先级
 
-promise 定义 `await_transform` 时，所有 `co_await` 的操作数都先经过它，包括本来可以直接作为 awaiter 的类型。若 `await_transform` 对某个类型没有合适的重载，编译失败。
+promise 定义 `await_transform` 时，所有显式 `co_await` 的操作数都先经过它，包括本来可以直接作为 awaiter 的类型。若 `await_transform` 对某个类型没有合适的重载，编译失败。由 `co_yield`、初始挂起与最终挂起产生的隐式等待不经过 `await_transform` [expr.await]/3。
 
 这个机制让任务类型可以限制可等待的类型集合，也带来一个常见问题：在协程中 `co_await` 一个普通 awaiter 时，如果 `await_transform` 只接受 sender，编译会失败。库通常提供恒等重载或 `as_awaitable` 适配。
 
