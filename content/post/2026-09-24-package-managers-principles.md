@@ -2,7 +2,6 @@
 title: "包管理器（一）：依赖管理的原理"
 slug: "package-managers-principles"
 date: "2026-09-24"
-categories: ["其他"]
 tags: ["包管理器", "依赖管理"]
 series: "包管理器"
 series_order: 1
