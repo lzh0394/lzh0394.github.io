@@ -2,7 +2,6 @@
 title: "包管理器（二）：系统级包管理器"
 slug: "package-managers-os"
 date: "2026-09-24"
-categories: ["其他"]
 tags: ["包管理器", "Linux"]
 series: "包管理器"
 series_order: 2
