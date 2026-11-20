@@ -201,6 +201,32 @@ g'h' = gh\,(h^{-1}n_1h)\,n_2 \in ghN
 
 这里用到 \(h^{-1}n_1h \in  N\)，正是正规性。结合律继承自 \(G\)，单位元为 \(N\)，\(gN\) 的逆元为 \(g^{-1}N\)。
 
+> **引理 4.7（两个子群之积）**
+>
+> 设 \(H, K \le  G\)。\(HK\) 是子群，当且仅当 \(HK = KH\)；此时 \(HK\) 是包含 \(H\) 与 \(K\) 的最小子群。特别地，若 \(H\) 或 \(K\) 正规，则 \(HK \le  G\)。
+
+证明　设 \(HK = KH\)。\(e = ee \in HK\)。若 \(h_i \in  H\)，\(k_i \in  K\)，则
+
+\[
+(h_1 k_1)(h_2 k_2) = h_1 (k_1 h_2) k_2
+\]
+
+而 \(k_1 h_2 \in  KH = HK\)，故上式属于 \(HK\)。又 \((hk)^{-1} = k^{-1}h^{-1} \in  KH = HK\)，故 \(HK \le  G\)。任何包含 \(H\) 与 \(K\) 的子群都含一切乘积 \(hk\)，故包含 \(HK\)；而 \(HK\) 含 \(H\) 与 \(K\)，故它是最小的，即 \(HK = \langle H\cup K\rangle\)。
+
+反之设 \(HK \le  G\)。子群的逆仍是自身，故
+
+\[
+HK = (HK)^{-1} = K^{-1}H^{-1} = KH
+\]
+
+最后设 \(N \trianglelefteq  G\)，\(H \le  G\)。对 \(h \in  H\)，\(n \in  N\)，
+
+\[
+hn = (hnh^{-1})h \in  NH,\qquad nh = h(h^{-1}nh) \in  HN
+\]
+
+故 \(HN = NH\)，由已证部分得 \(HN \le  G\)。
+
 ---
 
 ## 5. 同态与同构定理
@@ -261,13 +287,7 @@ f(g)^{-1} f(g') = f(g^{-1}) f(g') = f(g^{-1}g') = e
 >
 > 设 \(H \le  G\)，\(N \trianglelefteq  G\)。则 \(HN \le  G\)，\(N \trianglelefteq  HN\)，\(H \cap  N \trianglelefteq  H\)，且 \(HN/N \cong  H/(H \cap  N)\)。
 
-证明　先说明 \(HN\) 是子群。设 \(h_1 n_1, h_2 n_2 \in  HN\)。由 \(N\) 正规，
-
-\[
-(h_1 n_1)(h_2 n_2)^{-1} = h_1 h_2^{-1} \cdot (h_2 n_1 n_2^{-1} h_2^{-1}) \in HN
-\]
-
-故 \(HN \le  G\)。\(N\) 在 \(G\) 中正规，在 \(HN\) 中也正规；\(H \cap  N\) 在 \(H\) 中共轭不变，故 \(H \cap  N \trianglelefteq  H\)。
+证明　由引理 4.7，\(N\) 正规给出 \(HN = NH\)，故 \(HN \le  G\)。\(N\) 在 \(G\) 中正规，在 \(HN\) 中也正规；\(H \cap  N\) 在 \(H\) 中共轭不变，故 \(H \cap  N \trianglelefteq  H\)。
 
 定义 \(q: H \to  HN/N\)，\(q(h) = hN\)。它是同态，核为 \(\{h : hN = N\} = H \cap  N\)。
 
