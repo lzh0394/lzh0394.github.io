@@ -21,11 +21,18 @@ concurrency:
 
 # 钉住具体镜像而不是 ubuntu-latest：latest 会在 LTS 之间渐进迁移，
 # 用标签既会收到迁移 notice，构建环境也可能悄悄变化。
-# 26.04 是当前 LTS（2026-04 发布，镜像已 GA）；换版本时显式改这两处。
+# 26.04 是当前 LTS（2026-04 发布，镜像已 GA）；换版本时显式改这里。
+#
+# 构建与部署合并在同一个作业里：拆成两个作业会多出约 4 秒的作业切换
+# 与一次重复的 setup，而 deploy-pages 只要求产物来自同一次运行，
+# 权限本来就是全局声明，合并不会放宽任何权限。
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-26.04
-    name: Hugo → 上传产物
+    name: 构建并发布
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: 检出仓库
         uses: actions/checkout@v5
@@ -53,14 +60,6 @@ jobs:
         with:
           path: ./public
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-26.04
-    name: 发布到 GitHub Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: 部署
         id: deployment
         uses: actions/deploy-pages@v5
