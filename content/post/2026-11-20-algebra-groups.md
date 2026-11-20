@@ -369,6 +369,14 @@ g\cdot x = (ge)\cdot x = g\cdot (e\cdot x)
 >
 > \(x\) 的轨道是 \(\operatorname{Orb}(x) = \{g\cdot x : g \in  G\}\)，稳定子是 \(\operatorname{Stab}(x) = \{g : g\cdot x = x\}\)。
 
+固定 \(x\)，考虑映射 \(\operatorname{ev}_x : G \to  X\)，\(\operatorname{ev}_x(g) = g\cdot x\)。轨道是它的像，稳定子是它在 \(x\) 处的纤维：
+
+\[
+\operatorname{Orb}(x) = \operatorname{im}  \operatorname{ev}_x,\qquad \operatorname{Stab}(x) = \operatorname{ev}_x^{-1}(x)
+\]
+
+于是「点能走到哪里」与「哪些元素让它停下」分别是这个映射的像与纤维。
+
 > **引理 6.5（轨道划分）**
 >
 > 轨道构成 \(X\) 的划分，稳定子是子群。
