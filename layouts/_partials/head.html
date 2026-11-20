@@ -21,3 +21,6 @@
 <link rel="icon" type="image/png" sizes="32x32" href="{{ "favicon-32x32.png" | relURL }}">
 <link rel="apple-touch-icon" href="{{ "apple-touch-icon.png" | relURL }}">
 <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
+{{ if .Params.math }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+{{ end }}
