@@ -224,9 +224,15 @@ f(gng^{-1}) = f(g)f(n)f(g)^{-1} = f(g)e f(g)^{-1} = e
 >
 > 设 `f: G → H` 为群同态。则 `G / ker f ≅ im f`。
 
-证明　定义映射 `g·ker f ↦ f(g)`。若 `g·ker f = g'·ker f`，则 `g^{-1}g' ∈ ker f`，故 `f(g) = f(g')`，映射良定义。
+证明　定义
 
-它保持乘法，核为 `ker f`，故为单射；像为 `im f`，故为满射。
+```text
+F: G/ker f → im f,  F(g·ker f) = f(g)
+```
+
+若 `g·ker f = g'·ker f`，则 `g^{-1}g' ∈ ker f`，故 `f(g) = f(g')`，`F` 良定义。
+
+`F` 保持乘法。若 `F(g·ker f) = e`，则 `f(g) = e`，即 `g ∈ ker f`，故 `g·ker f = ker f`，核平凡，`F` 为单射。`F` 的像就是 `im f`，故为满射。
 
 > **定理 5.4（对应定理）**
 >
