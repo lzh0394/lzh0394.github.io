@@ -365,9 +365,9 @@ g\cdot x = (ge)\cdot x = g\cdot (e\cdot x)
 >
 > \(D_n\) 作用在正 \(n\) 边形的顶点上；\(S_n\) 作用在 \(\{1, \ldots , n\}\) 上；\(G\) 通过左乘作用在自身上；\(G\) 通过共轭作用在自身上；\(GL_n(F)\) 作用在 \(F^n\) 上。
 
-> **定义 6.4（轨道与稳定子）**
+> **定义 6.4（轨道、稳定子与传递作用）**
 >
-> \(x\) 的轨道是 \(\operatorname{Orb}(x) = \{g\cdot x : g \in  G\}\)，稳定子是 \(\operatorname{Stab}(x) = \{g : g\cdot x = x\}\)。
+> \(x\) 的轨道是 \(\operatorname{Orb}(x) = \{g\cdot x : g \in  G\}\)，稳定子是 \(\operatorname{Stab}(x) = \{g : g\cdot x = x\}\)。若对任意 \(x, y \in  X\) 存在 \(g \in  G\) 使 \(g\cdot x = y\)，等价地 \(X\) 只有一个轨道，则称 \(G\) 在 \(X\) 上的作用传递。
 
 固定 \(x\)，考虑映射 \(\operatorname{ev}_x : G \to  X\)，\(\operatorname{ev}_x(g) = g\cdot x\)。轨道是它的像，稳定子是它在 \(x\) 处的纤维：
 
