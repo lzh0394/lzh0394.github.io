@@ -349,6 +349,18 @@ H/\ker  q = H/(H \cap  N) \cong  \operatorname{im}  q = HN/N
 
 证明　给定作用，令 \(f(g)(x) = g\cdot x\)。作用公理保证 \(f(g)\) 是双射，且 \(f(gh) = f(g)f(h)\)。反之给定同态，令 \(g\cdot x = f(g)(x)\)，两条公理成立。
 
+定义 6.1 的两条公理不能互相推出。取 \(X\) 至少含两个点，固定 \(c \in  X\)，令 \(g\cdot x = c\) 对一切 \(g, x\) 成立。结合公理成立，因为两边都等于 \(c\)；但 \(e\cdot x = c \ne x\)。反之，取 \(G = C_2 = \{e, g\}\) 与 \(X = \{0, 1\}\)，令 \(e\cdot x = x\)、\(g\cdot x = 0\)，则 \((gg)\cdot 1 = e\cdot 1 = 1\)，而 \(g\cdot (g\cdot 1) = g\cdot 0 = 0\)，结合公理不成立。
+
+单位元公理可以换成「每个 \(g\) 的作用是双射」。若 \((gh)\cdot x = g\cdot (h\cdot x)\) 且 \(x \mapsto  g\cdot x\) 可逆，则
+
+\[
+g\cdot x = (ge)\cdot x = g\cdot (e\cdot x)
+\]
+
+由单射得 \(e\cdot x = x\)。只要求每个 \(g\) 的作用是单射同样足够；再由 \(g\cdot (g^{-1}\cdot x) = x\) 可知它还是满射。这正是引理 6.2 中作用与同态等价的来源：双射对应 \(\operatorname{Sym}(X)\)，结合公理对应保持乘法。
+
+若只保留结合公理，令 \(\varphi (g)(x) = g\cdot x\)，则 \(\varphi (e)^2 = \varphi (ee) = \varphi (e)\)，即 \(\varphi (e)\) 是幂等映射，把 \(X\) 收缩到像上。在像上 \(e\) 确实作用为恒等：对 \(y = \varphi (e)(x)\) 有 \(e\cdot y = \varphi (e)(y) = y\)。单位元公理的作用就是要求这层投影是恒等。
+
 > **例 6.3（作用的例子）**
 >
 > \(D_n\) 作用在正 \(n\) 边形的顶点上；\(S_n\) 作用在 \(\{1, \ldots , n\}\) 上；\(G\) 通过左乘作用在自身上；\(G\) 通过共轭作用在自身上；\(GL_n(F)\) 作用在 \(F^n\) 上。
