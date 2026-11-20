@@ -4,7 +4,7 @@ slug: "algebra-modules"
 date: "2026-11-20"
 tags: ["数学", "代数", "模论", "线性代数"]
 series: "代数入门"
-series_order: 5
+series_order: 6
 draft: false
 summary: "模与线性代数的入门书目与读法：Dummit–Foote 第 10 至 12 章的章级目录、主理想整环上的结构定理、Axler 的定位与张量积的泛性质。"
 ---

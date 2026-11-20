@@ -4,7 +4,7 @@ slug: "algebra-rings"
 date: "2026-11-20"
 tags: ["数学", "代数", "环论", "教材"]
 series: "代数入门"
-series_order: 3
+series_order: 4
 draft: false
 summary: "环论入门书目与读法：Dummit–Foote 第 7 至 9 章的章级目录，理想与商环、因式分解的层次，以及多项式环与域论的接口。"
 ---

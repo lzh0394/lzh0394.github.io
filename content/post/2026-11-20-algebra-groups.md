@@ -4,7 +4,7 @@ slug: "algebra-groups"
 date: "2026-11-20"
 tags: ["数学", "代数", "群论", "教材"]
 series: "代数入门"
-series_order: 2
+series_order: 3
 draft: false
 summary: "群论入门书目与读法：Dummit–Foote 第 1 至 6 章的章级目录、Fraleigh 的群论部分，以及群作用的范畴视角。"
 ---

@@ -4,7 +4,7 @@ slug: "algebra-categories"
 date: "2026-11-20"
 tags: ["数学", "代数", "范畴论", "教材"]
 series: "代数入门"
-series_order: 6
+series_order: 7
 draft: false
 summary: "范畴论如何进入代数入门：Aluffi 的章级目录与重排、范畴与函子的基本语言、泛性质与伴随，以及进一步书目。"
 ---
@@ -33,7 +33,7 @@ Aluffi 的《Algebra: Chapter 0》共 9 章：
 | VIII | 线性代数，再论 |
 | IX | 同调代数 |
 
-原书把环与模放在一起，线性代数出现两次。按本系列的群环域顺序，可调整为：第 I、II、III、IV、V 章，然后第 VII 章，最后第 VI、VIII 章，第 IX 章留到第二阶段。
+原书把环与模放在一起，线性代数出现两次。按本书的群环域顺序，可调整为：第 I、II、III、IV、V 章，然后第 VII 章，最后第 VI、VIII 章，第 IX 章留到第二阶段。
 
 ## 2. 三个基本概念
 

@@ -4,7 +4,7 @@ slug: "algebra-fields"
 date: "2026-11-20"
 tags: ["数学", "代数", "域论", "伽罗瓦理论"]
 series: "代数入门"
-series_order: 4
+series_order: 5
 draft: false
 summary: "域论与伽罗瓦理论的入门书目与读法：Dummit–Foote 第 13、14 章的章级目录，扩张的分类、伽罗瓦对应与两个经典应用。"
 ---
