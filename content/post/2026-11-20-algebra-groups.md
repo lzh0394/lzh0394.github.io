@@ -375,7 +375,7 @@ g\cdot x = (ge)\cdot x = g\cdot (e\cdot x)
 \operatorname{Orb}(x) = \operatorname{im}  \operatorname{ev}_x,\qquad \operatorname{Stab}(x) = \operatorname{ev}_x^{-1}(x)
 \]
 
-于是「点能走到哪里」与「哪些元素让它停下」分别是这个映射的像与纤维。
+于是「点能走到哪里」与「哪些元素让它停下」分别是这个映射的像与纤维。注意 \(\operatorname{ev}_x\) 一般不是同态，像与纤维都只取集合论意义：\(X\) 上没有乘法，轨道一般也不是群。
 
 > **引理 6.5（轨道划分）**
 >
