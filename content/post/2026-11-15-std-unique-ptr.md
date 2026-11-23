@@ -2,7 +2,7 @@
 title: "std::unique_ptr 研究"
 slug: "std-unique-ptr"
 date: "2026-11-15"
-tags: ["C++", "标准库", "unique_ptr", "RAII"]
+tags: ["C++", "标准库", "内存管理"]
 series: "C++ 标准库"
 series_order: 9
 draft: false

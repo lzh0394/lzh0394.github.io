@@ -2,7 +2,7 @@
 title: "C++ concepts"
 slug: "cpp-concepts"
 date: "2026-11-19"
-tags: ["C++", "concepts", "模板", "泛型编程"]
+tags: ["C++", "模板"]
 draft: false
 summary: "以 C++ 工作草案与 WG21 提案为据，拆解 concept 的四个环节：约束的引入位置、归一化、原子约束的满足性检查、包含关系与重载决议；说明 requires 表达式检查的边界、标准库概念的语义要求，以及 C++26 折叠约束与 concept 模板参数改变了什么。"
 ---

@@ -2,7 +2,7 @@
 title: "抽象代数 III：交换代数"
 slug: "abstract-algebra-commutative-algebra"
 date: "2026-11-20"
-tags: ["数学", "抽象代数", "交换代数", "代数数论"]
+tags: ["数学", "抽象代数"]
 series: "抽象代数"
 series_order: 3
 draft: false

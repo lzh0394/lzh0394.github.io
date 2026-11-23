@@ -2,7 +2,7 @@
 title: "范畴论视角下的代数"
 slug: "algebra-categories"
 date: "2026-11-20"
-tags: ["数学", "代数", "范畴论", "教材"]
+tags: ["数学", "代数", "范畴论"]
 series: "代数入门"
 series_order: 7
 draft: false

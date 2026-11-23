@@ -2,7 +2,7 @@
 title: "代数入门路线：群、环、域、模的顺序"
 slug: "algebra-roadmap"
 date: "2026-11-20"
-tags: ["数学", "代数", "教材", "阅读路线"]
+tags: ["数学", "代数"]
 series: "代数入门"
 series_order: 2
 draft: false

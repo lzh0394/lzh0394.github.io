@@ -2,7 +2,7 @@
 title: "std::function 研究"
 slug: "std-function"
 date: "2026-11-15"
-tags: ["C++", "标准库", "function", "类型擦除"]
+tags: ["C++", "标准库"]
 series: "C++ 标准库"
 series_order: 6
 draft: false

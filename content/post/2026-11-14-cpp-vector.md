@@ -2,7 +2,7 @@
 title: "C++ vector 解析"
 slug: "cpp-vector"
 date: "2026-11-14"
-tags: ["C++", "标准库", "STL", "内存管理"]
+tags: ["C++", "标准库", "内存管理"]
 series: "C++ 标准库"
 series_order: 4
 draft: false

@@ -2,7 +2,7 @@
 title: "C++ 的名字查找"
 slug: "cpp-name-lookup"
 date: "2026-11-20"
-tags: ["C++", "名字查找", "作用域", "模板"]
+tags: ["C++", "模板"]
 draft: false
 summary: "以 C++ 工作草案的 [basic.lookup]、[class.member.lookup] 与 [temp.res] 条款为据，拆解名字查找的执行顺序：程序点与声明点、非限定查找的逐层搜索、限定查找与类成员查找集的合并、ADL 的关联实体、模板两阶段查找的分界，以及隐藏、二义与访问检查的先后关系。"
 ---

@@ -2,7 +2,7 @@
 title: "标准库分配器的演化：从类型参数到 traits、pmr 与常量求值"
 slug: "allocator-evolution"
 date: "2026-11-14"
-tags: ["C++", "标准库", "分配器", "WG21"]
+tags: ["C++", "标准库"]
 series: "C++ 标准库"
 series_order: 2
 draft: false

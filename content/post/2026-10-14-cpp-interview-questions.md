@@ -2,7 +2,7 @@
 title: "C++ 语言与标准库面试题"
 slug: "cpp-interview-questions"
 date: "2026-10-14"
-tags: ["C++", "面试", "STL", "并发"]
+tags: ["C++", "面试", "标准库", "并发"]
 series: "C++ 开发岗面试"
 series_order: 1
 draft: false

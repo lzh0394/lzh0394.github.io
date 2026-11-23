@@ -2,7 +2,7 @@
 title: "索引约定：0 基与半开区间"
 slug: "indexing-conventions"
 date: "2026-10-14"
-tags: ["Dijkstra"]
+tags: ["语言设计"]
 draft: false
 summary: "记录 Dijkstra 短文 EWD 831《Why numbering should start at zero》的出处与论证要点（半开区间 [lo, hi) 的三条优势、下标从 0 起只是推论）；整理前闭后开区间失配的场景（连续域、上界+1 溢出、取模回绕、离散单元、面向人/协议的闭区间惯例、无尾后迭代器的链式结构）；给出 0 基、1 基、由声明决定三类语言的对照表与常见误记点（Lua 1 基、Julia 任意轴、字符串索引分裂等）；并辨析「索引 1 起、偏移 0 起」的提法：位置语义下序数与偏移是同一个量，能分开的只有序数与计数值，可行形态是单一约定加边界转换（MATLAB/Fortran、SQL 的双系统并存）。"
 ---

@@ -2,7 +2,7 @@
 title: "C++ 领域方向面试题"
 slug: "cpp-interview-domains"
 date: "2026-11-15"
-tags: ["C++","面试","游戏引擎","嵌入式"]
+tags: ["C++", "面试"]
 series: "C++ 开发岗面试"
 series_order: 8
 draft: false

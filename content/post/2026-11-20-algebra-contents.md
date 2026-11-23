@@ -2,7 +2,7 @@
 title: "代数入门：全书目录"
 slug: "algebra-contents"
 date: "2026-11-20"
-tags: ["数学", "代数", "教材", "目录"]
+tags: ["数学", "代数"]
 series: "代数入门"
 series_order: 1
 draft: false

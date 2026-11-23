@@ -2,7 +2,7 @@
 title: "协程任务库的设计空间"
 slug: "coroutine-task-design"
 date: "2026-11-18"
-tags: ["C++", "协程", "任务库", "结构化并发"]
+tags: ["C++", "协程"]
 series: "异步与协程"
 series_order: 3
 draft: false

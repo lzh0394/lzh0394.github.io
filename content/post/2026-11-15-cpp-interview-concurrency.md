@@ -2,7 +2,7 @@
 title: "C++ 并发、异步与分布式面试题"
 slug: "cpp-interview-concurrency"
 date: "2026-11-15"
-tags: ["C++","面试","并发","分布式"]
+tags: ["C++", "面试", "并发", "分布式"]
 series: "C++ 开发岗面试"
 series_order: 6
 draft: false

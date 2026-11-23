@@ -2,7 +2,7 @@
 title: "版本管理软件简介"
 slug: "version-control-systems"
 date: "2026-10-14"
-tags: ["版本控制", "Git"]
+tags: ["版本控制"]
 draft: false
 summary: "先把版本控制从 SCCS/RCS 到 Git、GitHub、Sapling 的演变按时间线串起来，再按本地、集中式、分布式三代模型梳理，重点讲 Git 的对象模型与三区结构，并对比 Subversion、CVS、Perforce P4、TFVC、Mercurial、Fossil、Bazaar、Unity Version Control 等工具的定位与现状；另用一节区分快照模式与 delta 模式（语义层 vs 存储层、Git packfile delta、restic 内容定义分块、备份的全量/增量/差异），最后给出大文件、权限与选型建议。"
 ---

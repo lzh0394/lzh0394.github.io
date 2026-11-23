@@ -2,7 +2,7 @@
 title: "C++ 数据结构与算法面试题"
 slug: "cpp-interview-algorithms"
 date: "2026-11-15"
-tags: ["C++","面试","算法","数据结构"]
+tags: ["C++", "面试", "算法", "数据结构"]
 series: "C++ 开发岗面试"
 series_order: 10
 draft: false

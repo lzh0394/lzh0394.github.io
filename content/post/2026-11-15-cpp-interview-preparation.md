@@ -2,7 +2,7 @@
 title: "C++ 开发岗面试：简历、自我介绍与问题回答"
 slug: "cpp-interview-preparation"
 date: "2026-11-15"
-tags: ["C++", "面试", "简历", "求职"]
+tags: ["C++", "面试", "求职"]
 series: "C++ 开发岗面试"
 series_order: 0
 draft: false

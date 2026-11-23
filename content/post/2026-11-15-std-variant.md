@@ -2,7 +2,7 @@
 title: "std::variant 研究"
 slug: "std-variant"
 date: "2026-11-15"
-tags: ["C++", "标准库", "variant", "类型安全联合"]
+tags: ["C++", "标准库"]
 series: "C++ 标准库"
 series_order: 11
 draft: false

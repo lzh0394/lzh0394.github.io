@@ -2,7 +2,7 @@
 title: "std::string 研究"
 slug: "std-string"
 date: "2026-11-15"
-tags: ["C++", "标准库", "字符串", "SSO"]
+tags: ["C++", "标准库", "字符串"]
 series: "C++ 标准库"
 series_order: 5
 draft: false

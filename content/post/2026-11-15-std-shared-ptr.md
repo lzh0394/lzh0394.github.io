@@ -2,7 +2,7 @@
 title: "std::shared_ptr 研究"
 slug: "std-shared-ptr"
 date: "2026-11-15"
-tags: ["C++", "标准库", "shared_ptr", "引用计数"]
+tags: ["C++", "标准库", "内存管理"]
 series: "C++ 标准库"
 series_order: 10
 draft: false

@@ -2,7 +2,7 @@
 title: "C/C++ 编译模型"
 slug: "c-cpp-compilation-model"
 date: "2026-11-14"
-tags: ["C", "C++", "编译", "链接"]
+tags: ["C++", "编译链接"]
 draft: false
 summary: "以翻译单元、目标文件、符号与重定位、链接与 ABI 为线，拆解 C 与 C++ 的单独编译模型，说明头文件、inline、模板实例化、静态初始化与跨语言调用如何受这一模型约束，并对照 LTO、统一构建与 C++20 模块这些替代方案。"
 ---

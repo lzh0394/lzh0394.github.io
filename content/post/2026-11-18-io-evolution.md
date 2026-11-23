@@ -2,7 +2,7 @@
 title: "I/O 的发展过程：从轮询到 io_uring"
 slug: "io-evolution"
 date: "2026-11-18"
-tags: ["I/O", "操作系统", "io_uring", "异步"]
+tags: ["异步", "操作系统"]
 series: "异步与协程"
 series_order: 0
 draft: false

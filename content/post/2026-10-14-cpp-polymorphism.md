@@ -2,7 +2,7 @@
 title: "C++ 多态"
 slug: "cpp-polymorphism"
 date: "2026-10-14"
-tags: ["C++", "多态", "虚函数", "对象模型"]
+tags: ["C++", "对象模型"]
 draft: false
 summary: "以标准条款为准梳理 C++ 运行期多态：虚函数的定义与重写条件、override/final、静态类型决定名字与访问与默认实参而动态类型决定实际调用、final overrider 与多继承歧义、构造析构期间的派发限制、抽象类与纯虚函数、虚析构与 delete、typeid 与 dynamic_cast，并区分标准规定与 vptr/vtable/去虚化这类实现行为。"
 ---

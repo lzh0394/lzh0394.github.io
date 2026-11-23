@@ -2,7 +2,7 @@
 title: "C++ 对象模型"
 slug: "cpp-object-model"
 date: "2026-10-14"
-tags: ["C++", "对象模型", "ABI"]
+tags: ["C++", "对象模型"]
 draft: false
 summary: "以标准条款为准区分语义层的对象与实现层的布局：非多态对象与多态对象的表示、vptr 与 vtable、虚继承与虚基类、多继承中的指针调整、dynamic_cast 与 RTTI、平凡性与标准布局、生命期与创建销毁（含 C++20 隐式创建对象），并说明哪些是标准规定、哪些只是实现行为。"
 ---

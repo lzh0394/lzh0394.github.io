@@ -2,7 +2,7 @@
 title: "C++ 的 SFINAE"
 slug: "cpp-sfinae"
 date: "2026-11-19"
-tags: ["C++", "模板", "SFINAE", "重载决议"]
+tags: ["C++", "模板"]
 draft: false
 summary: "以草案条款、提案与缺陷报告为据，解释 SFINAE 的判定位置：替换失败只在立即上下文中移除候选，函数体、类模板实例化、默认函数实参与 noexcept 说明符中的失败都是硬错误；并给出 enable_if、void_t 与表达式 SFINAE 的写法、边界和与 concepts 的分工。"
 ---

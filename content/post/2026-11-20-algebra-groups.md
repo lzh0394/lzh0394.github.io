@@ -2,7 +2,7 @@
 title: "群论：从对称到可解群"
 slug: "algebra-groups"
 date: "2026-11-20"
-tags: ["数学", "代数", "群论", "教材"]
+tags: ["数学", "代数", "群论"]
 series: "代数入门"
 series_order: 3
 draft: false

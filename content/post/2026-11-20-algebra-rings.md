@@ -2,7 +2,7 @@
 title: "环论：从整数到戴德金整环"
 slug: "algebra-rings"
 date: "2026-11-20"
-tags: ["数学", "代数", "环论", "交换代数"]
+tags: ["数学", "代数", "环论"]
 series: "代数入门"
 series_order: 4
 draft: false

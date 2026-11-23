@@ -2,7 +2,7 @@
 title: "包管理器（四）：应用层、供应链与实践"
 slug: "package-managers-practice"
 date: "2026-09-24"
-tags: ["包管理器", "供应链", "工具链"]
+tags: ["包管理器", "工具链"]
 series: "包管理器"
 series_order: 4
 draft: false

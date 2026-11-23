@@ -2,7 +2,7 @@
 title: "C++ 系统编程面试题"
 slug: "cpp-interview-systems"
 date: "2026-11-15"
-tags: ["C++","面试","操作系统","系统编程"]
+tags: ["C++", "面试", "操作系统", "系统编程"]
 series: "C++ 开发岗面试"
 series_order: 2
 draft: false

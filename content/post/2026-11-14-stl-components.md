@@ -2,7 +2,7 @@
 title: "STL 需要有什么组件"
 slug: "stl-components"
 date: "2026-11-14"
-tags: ["C++", "标准库", "STL", "架构"]
+tags: ["C++", "标准库"]
 series: "C++ 标准库"
 series_order: 1
 draft: false

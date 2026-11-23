@@ -2,7 +2,7 @@
 title: "协程定制的层级"
 slug: "coroutine-customization-layers"
 date: "2026-11-19"
-tags: ["C++", "协程", "定制点", "库设计"]
+tags: ["C++", "协程"]
 series: "异步与协程"
 series_order: 5
 draft: false

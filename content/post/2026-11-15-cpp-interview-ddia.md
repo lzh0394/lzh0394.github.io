@@ -2,7 +2,7 @@
 title: "C++ 数据密集型系统面试题"
 slug: "cpp-interview-ddia"
 date: "2026-11-15"
-tags: ["C++","面试","DDIA","分布式"]
+tags: ["C++", "面试", "分布式"]
 series: "C++ 开发岗面试"
 series_order: 13
 draft: false

@@ -2,7 +2,7 @@
 title: "C++ 后端应用面试题"
 slug: "cpp-interview-backend"
 date: "2026-11-15"
-tags: ["C++","面试","HTTP","MySQL"]
+tags: ["C++", "面试", "网络编程", "数据库"]
 series: "C++ 开发岗面试"
 series_order: 11
 draft: false

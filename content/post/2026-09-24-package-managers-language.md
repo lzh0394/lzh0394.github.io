@@ -2,7 +2,7 @@
 title: "包管理器（三）：语言级包管理器"
 slug: "package-managers-language"
 date: "2026-09-24"
-tags: ["包管理器", "编程语言"]
+tags: ["包管理器", "语言设计"]
 series: "包管理器"
 series_order: 3
 draft: false

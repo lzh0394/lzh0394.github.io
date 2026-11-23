@@ -2,7 +2,7 @@
 title: "C++ 对齐规则"
 slug: "cpp-alignment"
 date: "2026-11-19"
-tags: ["C++", "对齐", "对象模型", "ABI"]
+tags: ["C++", "对象模型"]
 draft: false
 summary: "以标准草案、提案与实现源码为据，区分对齐要求、对象布局与分配保证：alignof 与 alignas 的边界、类与数组的对齐推导、基本对齐与扩展对齐、C++17 过度对齐 new、C 分配函数的限制，以及 max_align_t 与 long double 在 ABI 上的差异。"
 ---

@@ -2,7 +2,7 @@
 title: "别名分析概述"
 slug: "alias-analysis"
 date: "2026-10-22"
-tags: ["编译器", "程序分析", "别名分析"]
+tags: ["编译器"]
 draft: false
 summary: "别名分析判断两个指针是否指向同一块存储，NoAlias、MayAlias、MustAlias 三种判定各自支持哪些优化，restrict 这类语言承诺又如何变成编译器的不别名假设。"
 ---

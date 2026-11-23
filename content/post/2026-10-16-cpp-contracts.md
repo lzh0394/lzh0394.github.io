@@ -2,7 +2,7 @@
 title: "C++ contracts 提案"
 slug: "cpp-contracts"
 date: "2026-10-16"
-tags: ["C++", "契约/Contracts"]
+tags: ["C++", "语言设计"]
 draft: false
 summary: "梳理契约（contracts）从 P0542 进入 C++20 又被移除、SG21 重做 MVP、P2900R14 进入 C++26 直至 DIS 投票阶段的完整脉络：C++26 的 pre/post/contract_assert 语法、四种求值语义与违规判定、handler 与 `<contracts>` 库设施，2025–2026 的九类反对意见与反提案，C++29 路线图中已并入的虚函数契约（P3097R3），以及 GCC/Clang/MSVC 的实现现状。全文区分规范保证、implementation-defined、unspecified 与实现行为，并区分 C++26 DIS 文本与 C++29 现行工作草案。"
 ---

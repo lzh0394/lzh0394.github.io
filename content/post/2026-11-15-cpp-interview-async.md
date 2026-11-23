@@ -2,7 +2,7 @@
 title: "C++ 异步编程面试题"
 slug: "cpp-interview-async"
 date: "2026-11-15"
-tags: ["C++","面试","Asio","异步"]
+tags: ["C++", "面试", "异步"]
 series: "C++ 开发岗面试"
 series_order: 14
 draft: false

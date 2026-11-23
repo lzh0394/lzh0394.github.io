@@ -2,7 +2,7 @@
 title: "抽象代数 II：结合代数"
 slug: "abstract-algebra-associative-algebras"
 date: "2026-11-20"
-tags: ["数学", "抽象代数", "结合代数", "表示论"]
+tags: ["数学", "抽象代数"]
 series: "抽象代数"
 series_order: 2
 draft: false

@@ -2,7 +2,7 @@
 title: "模与线性代数：从向量空间到主理想整环上的模"
 slug: "algebra-modules"
 date: "2026-11-20"
-tags: ["数学", "代数", "模论", "线性代数"]
+tags: ["数学", "代数"]
 series: "代数入门"
 series_order: 6
 draft: false

@@ -2,7 +2,7 @@
 title: "C++ 测试、安全与设计面试题"
 slug: "cpp-interview-quality"
 date: "2026-11-15"
-tags: ["C++","面试","测试","安全"]
+tags: ["C++", "面试", "测试", "安全"]
 series: "C++ 开发岗面试"
 series_order: 9
 draft: false

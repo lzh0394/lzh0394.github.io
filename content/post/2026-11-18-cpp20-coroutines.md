@@ -2,7 +2,7 @@
 title: "C++20 协程的语言机制"
 slug: "cpp20-coroutines"
 date: "2026-11-18"
-tags: ["C++", "协程", "语言机制", "异步"]
+tags: ["C++", "协程", "异步"]
 series: "异步与协程"
 series_order: 2
 draft: false

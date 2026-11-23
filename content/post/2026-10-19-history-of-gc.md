@@ -2,7 +2,7 @@
 title: "GC 的历史"
 slug: "history-of-gc"
 date: "2026-10-19"
-tags: ["垃圾回收/GC", "内存管理"]
+tags: ["内存管理"]
 draft: false
 summary: "从 1959 年 McCarthy 为 Lisp 设计的标记-清扫，到 Collins 的引用计数、Cheney 的半空间复制、Dijkstra 的三色标记、1980 年代的分代假说、Boehm 的保守式收集，再到 2000 年代以后 G1、ZGC 的低延迟路线与 Go、Ruby、Lua、Python 各自的分岔：按时间线梳理垃圾回收六十余年的主线，并区分当年的设计动机、规范保证与今天的实现现状。"
 ---

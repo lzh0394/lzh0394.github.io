@@ -2,7 +2,7 @@
 title: "C++ 算术运算溢出"
 slug: "cpp-arithmetic-overflow"
 date: "2026-10-14"
-tags: ["C++", "整数溢出", "未定义行为"]
+tags: ["C++", "未定义行为"]
 draft: false
 summary: "区分无符号回绕（定义良好）与有符号溢出（UB），澄清补码表示不等于溢出行为被定义；列举加减乘、取负、除法、移位、浮点转整型等触发点，并给出 -ftrapv、-fwrapv、UBSan、`__builtin_*_overflow` 与前置检查等防护手段。"
 ---

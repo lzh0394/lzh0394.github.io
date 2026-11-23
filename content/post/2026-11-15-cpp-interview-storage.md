@@ -2,7 +2,7 @@
 title: "C++ 存储与数据库面试题"
 slug: "cpp-interview-storage"
 date: "2026-11-15"
-tags: ["C++","面试","数据库","存储"]
+tags: ["C++", "面试", "数据库"]
 series: "C++ 开发岗面试"
 series_order: 4
 draft: false

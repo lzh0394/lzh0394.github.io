@@ -2,7 +2,7 @@
 title: "异步 I/O、执行器与 senders/receivers"
 slug: "async-io-and-executors"
 date: "2026-11-18"
-tags: ["C++", "异步", "io_uring", "std::execution"]
+tags: ["C++", "异步"]
 series: "异步与协程"
 series_order: 4
 draft: false
