@@ -2,7 +2,6 @@
 title: "C++ 异常的设计"
 slug: "cpp-exception-design"
 date: "2026-10-16"
-categories: ["编程语言"]
 tags: ["C++", "语言设计", "异常"]
 draft: false
 summary: "按「抛出的是什么对象」「谁能接住它」「栈怎么展开」三层拆开 C++ 异常的语义设计，再梳理异常规格从 C++98 动态规格到 noexcept 的沿革、标准库的异常家族与非异常路线，最后落到 Itanium C++ ABI 与 MSVC 的两阶段展开实现，说明「零开销」到底指什么；逐处区分规范保证、implementation-defined 与实现选择。"

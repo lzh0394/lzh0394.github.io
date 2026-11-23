@@ -2,7 +2,6 @@
 title: "不同的 C++ 使用者对字符串库有什么需求"
 slug: "string-library-needs"
 date: "2026-11-14"
-categories: ["编程语言"]
 tags: ["C++", "字符串", "Unicode", "标准库"]
 series: "C++ 标准库"
 series_order: 3

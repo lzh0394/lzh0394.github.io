@@ -2,7 +2,6 @@
 title: "大版本分裂：当升级变成分家"
 slug: "major-version-splits"
 date: "2026-11-14"
-categories: ["其他"]
 tags: ["软件史", "版本演进", "兼容性", "Python"]
 draft: false
 summary: "从 Python 2/3 的十二年迁移、Perl 5/6 的意外分家，到 ECMAScript 4 的流产、PHP 6 的取消、Ruby 1.8/1.9 的断裂，再到 VB6 与 VB.NET、.NET Framework 与 .NET Core、AngularJS 与 Angular、Mac OS X 与 KDE 4/GNOME 3 的换代：按语言、标准、平台、桌面四层梳理软件史上著名的大版本分裂，分析什么情况下升级会变成分家、迁移工具到底管什么用、为什么有的分裂最终合并而有的永久并存，并给出判断一条升级路线是否可行的指标。"

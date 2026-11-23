@@ -2,7 +2,6 @@
 title: "C++ 中有符号数与无符号数的转换"
 slug: "cpp-signed-unsigned-conversion"
 date: "2026-10-14"
-categories: ["编程语言"]
 tags: ["C++", "类型转换"]
 draft: false
 summary: "讲解有符号与无符号互转按 2^N 取模、位模式不变的规则，重点区分整型提升与通常算术转换，指出混比导致的陷阱（x > -1 恒真、i >= 0 死循环），并给出 std::cmp_less、循环变量写法、警告开关等工程建议。"

@@ -2,7 +2,6 @@
 title: "Windows GUI 框架"
 slug: "windows-gui-frameworks"
 date: "2026-10-18"
-categories: ["其他"]
 tags: ["Windows", "GUI", "跨平台"]
 draft: false
 summary: "按「谁在画控件」把 Windows 上的 GUI 方案分成系统原生、自绘引擎、浏览器内核三层，逐一列出微软原生栈（Win32、MFC/ATL、WPF、WinForms、UWP、WinUI 3）、C++ 跨平台工具包（Qt、wxWidgets、GTK、FLTK、Dear ImGui、Slint、egui）、.NET 生态（MAUI、Avalonia、Uno）、Web 技术壳（Electron、Tauri、Wails、WebView2、Blazor Hybrid）与其他运行时（Flutter、Compose、JavaFX、Python、Delphi），并给出按场景的选型表与许可、分发、输入法、无障碍几处容易踩的坑。"

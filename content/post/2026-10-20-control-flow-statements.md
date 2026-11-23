@@ -2,7 +2,6 @@
 title: "控制流语句的种类"
 slug: "control-flow-statements"
 date: "2026-10-20"
-categories: ["编程语言"]
 tags: ["编程语言"]
 draft: false
 summary: "从「改变执行次序的方式」出发给控制流语句分类：顺序与复合、选择、迭代、跳转、异常、作用域退出钩子、挂起与恢复；对照 C、C++、Rust、Go、Zig、Java、Python、JavaScript 的官方规范落点，并单列版本差异（C++11/17/20/23/26、Java 5/7/14/21、Python 3.8/3.10/3.11/3.14、Go 1.22/1.23、Rust 1.13/1.39/1.65、ES2015/2018/2019）。"

@@ -2,7 +2,6 @@
 title: "C++ 的历史错误决定"
 slug: "cpp-history-mistakes"
 date: "2026-10-14"
-categories: ["编程语言"]
 tags: ["C++", "语言设计"]
 draft: false
 summary: "按「标准自己撤销/替换」「一路打补丁才勉强能用」「因兼容或 ABI 明确无法回头」三类判据，梳理 C++ 从 C 继承以及自身引入的失败决定——动态异常规范、export 模板、std::auto_ptr、`std::vector<bool>`、std::valarray、std::regex、char8_t 的反复等，逐条标注修补发生在哪个标准版本、之前是什么，并区分标准规定、实现定义与未定义行为。"
