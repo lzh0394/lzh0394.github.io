@@ -15,7 +15,7 @@
 - 部署在 GitHub Pages：<https://lzh0394.github.io/>
 - 远端：`https://github.com/lzh0394/lzh0394.github.io.git`，主分支 `main`
 - 内容全部是中文技术文章
-- 导航页：首页、文章（`/post/`）、关于、系列（`/series/`）、标签（`/tags/`）；分类页已移除
+- 导航页：首页、文章（`/post/`）、关于、系列（`/series/`）；分类页与标签导航已移除
 - 站点配置在 `hugo.yaml`
 - 主题自建：模板在 `layouts/`，样式在 `static/css/`，不使用第三方主题或前端框架
 - 构建只依赖 Hugo 二进制
