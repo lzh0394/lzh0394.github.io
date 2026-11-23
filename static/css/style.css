@@ -204,6 +204,46 @@ pre code {
   font-size: 0.85em;
 }
 
+/* 系列导航 */
+.series-nav {
+  margin-top: 3em;
+  padding: 1em 1.25em;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.95em;
+}
+
+.series-nav .series-head {
+  margin: 0 0 0.5em;
+}
+
+.series-nav .series-head a {
+  color: var(--fg);
+}
+
+.series-nav ol {
+  margin: 0.5em 0;
+  padding-left: 1.75em;
+}
+
+.series-nav li {
+  margin: 0.15em 0;
+}
+
+.series-nav li.current {
+  color: var(--muted);
+}
+
+.series-nav .series-pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.75em 0 0;
+  padding-top: 0.75em;
+  border-top: 1px dashed var(--line);
+}
+
 /* 404 */
 .post-404 {
   text-align: center;

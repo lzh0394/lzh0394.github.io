@@ -7,5 +7,25 @@
     {{ end }}
   </div>
   {{ .Content }}
+  {{ with .GetTerms "series" }}
+  {{ range . }}
+  {{ $term := . }}
+  {{ $pages := .Pages.ByParam "series_order" }}
+  {{ $idx := -1 }}
+  {{ range $i, $p := $pages }}{{ if eq $p.RelPermalink $.RelPermalink }}{{ $idx = $i }}{{ end }}{{ end }}
+  {{ if ge $idx 0 }}
+  <nav class="series-nav" aria-label="系列目录">
+    <p class="series-head">系列：<a href="{{ $term.RelPermalink }}">{{ $term.LinkTitle | markdownify }}</a>（第 {{ add $idx 1 }} 篇 / 共 {{ len $pages }} 篇）</p>
+    <ol class="series-list">
+      {{ range $i, $p := $pages }}{{ if eq $i $idx }}<li class="current">{{ $p.Title | markdownify }}</li>{{ else }}<li><a href="{{ $p.RelPermalink }}">{{ $p.Title | markdownify }}</a></li>{{ end }}{{ end }}
+    </ol>
+    <p class="series-pager">
+      {{ if gt $idx 0 }}{{ $prev := index $pages (sub $idx 1) }}<a href="{{ $prev.RelPermalink }}" rel="prev">上一篇：{{ $prev.Title | markdownify }}</a>{{ else }}<span></span>{{ end }}
+      {{ if lt (add $idx 1) (len $pages) }}{{ $next := index $pages (add $idx 1) }}<a href="{{ $next.RelPermalink }}" rel="next">下一篇：{{ $next.Title | markdownify }}</a>{{ else }}<span></span>{{ end }}
+    </p>
+  </nav>
+  {{ end }}
+  {{ end }}
+  {{ end }}
 </article>
 {{ end }}
