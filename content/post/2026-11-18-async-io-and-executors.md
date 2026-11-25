@@ -4,12 +4,12 @@ slug: "async-io-and-executors"
 date: "2026-11-18"
 tags: ["C++", "异步"]
 series: "异步与协程"
-series_order: 4
+series_order: 5
 draft: false
 summary: "从 epoll 的就绪通知与 io_uring 的完成通知出发，梳理事件循环、执行器、strand 与背压的实现要点，再进入 P2300 的 sender/receiver、完成签名、connect/start 与组合算法，说明协程与 sender 如何互操作以及选型时需要核对的能力。"
 ---
 
-> 范围：操作系统异步 I/O 接口、用户态执行器与 C++26 的 `std::execution`。语言机制见第 2 篇，任务库见第 3 篇。
+> 范围：操作系统异步 I/O 接口、用户态执行器与 C++26 的 `std::execution`。语言机制见第 3 篇，任务库见第 4 篇。
 >
 > 标准侧以 C++26 最终草案 N5050 为基线；平台接口以 Linux、Windows 与 BSD 的公开文档为准，不绑定内核小版本。
 

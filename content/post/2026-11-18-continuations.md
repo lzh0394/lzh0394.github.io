@@ -3,6 +3,8 @@ title: "续延：控制流的具体化"
 slug: "continuations"
 date: "2026-11-18"
 tags: ["C++", "语言设计"]
+series: "异步与协程"
+series_order: 1
 draft: false
 summary: "把某一点之后剩余的计算具体化为值，据此解释协程、异常、生成器与代数效应，并比较各档实现在捕获范围、调用次数与运行时开销上的差别。"
 ---

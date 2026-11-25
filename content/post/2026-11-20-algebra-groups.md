@@ -3,8 +3,6 @@ title: "群论：从对称到可解群"
 slug: "algebra-groups"
 date: "2026-11-20"
 tags: ["数学", "代数", "群论"]
-series: "代数入门"
-series_order: 3
 draft: false
 math: true
 summary: "群论第一章：按教材体例编排，例子、定义、命题、引理、定理与推论依次编号，覆盖子群、商群、群作用、Sylow 定理、可解群、自由群与范畴视角。"
